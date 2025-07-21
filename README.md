@@ -1,82 +1,107 @@
 # AverageXPClassic
+![License – GPL v3 or later](gplv3-or-later.png)  
+[![Version](https://img.shields.io/badge/version-1.0.0-blue?style=flat-square)](https://github.com/<your‑org>/AverageXPClassic/releases/tag/v1.0.0)
+[![WoW Classic 1.15.7](https://img.shields.io/badge/WoW%20Classic‑1.15.7-green?style=flat-square)](https://worldofwarcraft.blizzard.com/)
 
-A lightweight WoW Classic addon that tracks your experience gains and displays session and lifetime average XP/hour with a visual graph.
+A lightweight WoW Classic addon that tracks your experience gains and displays session and lifetime average XP/hour with a visual graph.
+
+---
 
 ## Features
+- **Session Tracking** – XP/hour for your current play session  
+- **Lifetime Tracking** – Overall XP/hour across all sessions (per character)  
+- **Visual Graph** – Hourly XP bars showing recent performance  
+- **Draggable Interface** – Move the display anywhere on your screen  
+- **Customizable** – Set 2‑24 hourly buckets
 
-- **Session Tracking**: Shows XP/hour for your current play session
-- **Lifetime Tracking**: Displays overall XP/hour across all sessions (per character)
-- **Visual Graph**: Hourly XP bars showing recent performance
-- **Draggable Interface**: Move the display anywhere on your screen
-- **Customizable**: Adjust the number of hourly buckets (2-24 hours)
+---
 
 ## Installation
 
-### Manual Installation
-1. Download the latest release
-2. Extract the `AverageXPClassic` folder to your WoW Classic addons directory:
-   - **Windows**: `World of Warcraft\_classic_\Interface\AddOns\`
-   - **Mac**: `World of Warcraft/_classic_/Interface/AddOns/`
-3. Restart WoW Classic or type `/reload` in-game
+### Manual
+1. Download the latest release.
+2. Extract the `AverageXPClassic` folder to your WoW Classic addons directory:  
+   - **Windows** `World of Warcraft\_classic_\Interface\AddOns\`  
+   - **macOS** `World of Warcraft/_classic_/Interface/AddOns/`
+3. Restart WoW Classic or type `/reload` in‑game.
 
 ### CurseForge/Wago
-Available on [CurseForge](#) and [Wago](#) for automatic updates.
+Grab it on **[CurseForge](#)** or **[Wago](#)** for automatic updates.
+
+---
 
 ## Usage
 
-The addon automatically starts tracking when you log in. A small display window will appear showing:
-- Current session XP/hour
-- Overall lifetime XP/hour (for this character)
-- Visual graph of recent hourly performance
+Logging in automatically starts tracking. The display shows:
 
-### Commands
+- Current‑session XP/hour  
+- Lifetime XP/hour (this character)  
+- Graph of recent hourly performance  
 
-- `/avgxp` - Show available commands
-- `/avgxp reset` - Clear all tracking data
-- `/avgxp graph` - Toggle the visual graph on/off
-- `/avgxp buckets <2-24>` - Set number of hourly buckets to display
+### Slash Commands
 
-### Interface
+| Command | Action |
+|---------|--------|
+| `/avgxp` | Show command list |
+| `/avgxp reset` | Clear **all** tracking data |
+| `/avgxp graph` | Toggle graph on/off |
+| `/avgxp buckets <2‑24>` | Set number of hourly buckets |
 
-- **Drag**: Left-click and drag to move the window
-- **Tooltip**: Hover over graph bars to see exact XP and time
-- **Position**: Your window position is saved per character
+### Interface Tips
+
+* **Drag** – Left‑click and drag the window.  
+* **Tooltip** – Hover bars for exact XP & timestamp.  
+* **Position** – Saved per character.
+
+---
 
 ## Compatibility
 
-- **Classic Era** (Season of Discovery, Hardcore)
-- **Wrath Classic**
-- **Cataclysm Classic**
+- **Classic Era** (Season of Discovery, Hardcore)  
+- **Wrath Classic**  
+- **Cataclysm Classic**
+
+---
 
 ## Screenshots
 
-*Add screenshots here showing the addon in action*
+*Add images of the display and graph here.*
+
+---
 
 ## FAQ
 
-**Q: Does this work on retail WoW?**
-A: No, this is specifically designed for WoW Classic versions.
+**Q: Does this work on retail WoW?**  
+A: No—Classic clients only.
 
-**Q: Is the data saved when I log out?**
-A: Yes, all tracking data is saved per character and persists between sessions.
+**Q: Is data saved when I log out?**  
+A: Yes, per‑character and persistent.
 
-**Q: Can I reset just the session data?**
-A: Currently `/avgxp reset` clears all data. Session data automatically resets when you log in.
+**Q: Can I reset just the session data?**  
+A: Session resets on login; `/avgxp reset` clears everything.
+
+---
 
 ## Support
 
-- **Issues**: Report bugs on the Github page
-- **Feature Requests**: Also use GitHub Issues with the enhancement label
+Open issues or feature requests on the **GitHub repo**.
+
+---
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+Starting with **v1.0.0** (July 20 2025) this project is licensed under the  
+**GNU General Public License v3.0 or later (GPL‑3.0‑or‑later)** – see the `LICENSE` file for full terms.
+
+> *Pre‑1.0 development snapshots were never publicly released; all official public builds are GPL‑3.0‑or‑later.*
+
+---
 
 ## Changelog
 
-### v1.0.0 - Initial Release - Jul 20, 2025
-- Initial public release
-- Session and lifetime XP tracking
-- Visual hourly graph
-- Draggable interface
+### v1.0.0 – 2025‑07‑20
+- Initial public release  
+- Session & lifetime XP tracking  
+- Visual hourly graph  
+- Draggable interface  
 - Configurable bucket count
