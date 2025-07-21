@@ -1,4 +1,4 @@
-## Title: AverageXPClassic
+## Title: XPChronicle
 ## Author: Matthew Schaney
 ## Version: 1.0.0
 ## Notes: Shows session & lifetime average XP/hr for each character.
@@ -7,4 +7,4 @@
 ## Interface-Wrath: 30400
 ## Interface-Cata: 40400
 
-AverageXPClassic.lua
+XPChronicle.lua

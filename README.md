@@ -1,9 +1,9 @@
-# AverageXPClassic
-![In‑game XP window](https://raw.githubusercontent.com/matthewschaney/AverageXPClassic/main/screenshot.png)
+# XPChronicle
+![In‑game XP window](https://raw.githubusercontent.com/matthewschaney/XPChronicle/main/screenshot.png)
 
-[![Version](https://img.shields.io/github/v/release/matthewschaney/AverageXPClassic?label=latest&style=flat-square)](https://github.com/matthewschaney/AverageXPClassic/releases)
+[![Version](https://img.shields.io/github/v/release/matthewschaney/XPChronicle?label=latest&style=flat-square)](https://github.com/matthewschaney/XPChronicle/releases)
 [![WoW Classic 1.15.7](https://img.shields.io/badge/WoW%20Classic‑1.15.7-blue?style=flat-square)](https://worldofwarcraft.blizzard.com/)
-[![Source on GitHub](https://img.shields.io/badge/source-github-black?logo=github&style=flat-square)](https://github.com/matthewschaney/AverageXPClassic)
+[![Source on GitHub](https://img.shields.io/badge/source-github-black?logo=github&style=flat-square)](https://github.com/matthewschaney/XPChronicle)
 
 A lightweight WoW Classic addon that tracks your experience gains and displays session and lifetime average XP/hour with a visual graph.
 
@@ -22,7 +22,7 @@ A lightweight WoW Classic addon that tracks your experience gains and displays 
 
 ### Manual
 1. Download the latest release.
-2. Extract the `AverageXPClassic` folder to your WoW Classic addons directory:  
+2. Extract the `XPChronicle` folder to your WoW Classic addons directory:  
    - **Windows** `World of Warcraft\_classic_\Interface\AddOns\`  
    - **macOS** `World of Warcraft/_classic_/Interface/AddOns/`
 3. Restart WoW Classic or type `/reload` in‑game.
@@ -85,7 +85,7 @@ A: Session resets on login; `/avgxp reset` clears everything.
 
 ## Support
 
-Found a bug or have a feature request? Open an issue on the **[GitHub repository](https://github.com/matthewschaney/AverageXPClassic/issues)**.
+Found a bug or have a feature request? Open an issue on the **[GitHub repository](https://github.com/matthewschaney/XPChronicle/issues)**.
 
 ---
 

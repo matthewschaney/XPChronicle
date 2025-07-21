@@ -1,4 +1,4 @@
--- AverageXPClassic.lua – v1.0.0 - Initial Release
+-- XPChronicle.lua – v1.0.0 - Initial Release
 
 -----------------------------------------------------------------
 -- basic constants
@@ -53,9 +53,9 @@ end
 -----------------------------------------------------------------
 -- main panel
 -----------------------------------------------------------------
-local back = _G.AverageXPClassicDisplay
+local back = _G.AXPChronicleDisplay
 if not back then
-back = CreateFrame('Frame', 'AverageXPClassicDisplay', UIParent,
+back = CreateFrame('Frame', 'XPChronicleDisplay', UIParent,
 'BackdropTemplate')
 end
 back:SetSize(PANEL_W, PANEL_H)
@@ -86,8 +86,8 @@ label:SetJustifyH('CENTER')
 -----------------------------------------------------------------
 -- graph
 -----------------------------------------------------------------
-local graph = _G.AverageXPClassicGraph or CreateFrame('Frame',
-'AverageXPClassicGraph', back)
+local graph = _G.XPChronicleGraph or CreateFrame('Frame',
+'XPChronicleGraph', back)
 graph:SetPoint('TOP', back, 'BOTTOM', 0, -8)
 local bars, texts = {}, {}
 local function BuildBars()
@@ -213,7 +213,7 @@ msg = (msg or ''):lower():gsub('^%s+', '')
 if msg == 'reset' then
 AvgXPDB = {}; InitDB(); BuildBars()
 startXP, startTime, sessionXP = UnitXP('player'), time(), 0
-print('|cff33ff99AverageXPClassic|r: data reset.'); Refresh()
+print('|cff33ff99XPChronicle|r: data reset.'); Refresh()
 elseif msg == 'graph' then
 AvgXPDB.graphHidden = not AvgXPDB.graphHidden
 graph:SetShown(not AvgXPDB.graphHidden)
@@ -231,10 +231,10 @@ AvgXPDB.bucketStarts[i] = nil
 end
 BuildBars(); Refresh()
 else
-print('|cff33ff99AverageXPClassic|r: choose 2-24 buckets.')
+print('|cff33ff99XPChronicle|r: choose 2-24 buckets.')
 end
 else
-print('|cff33ff99AverageXPClassic|r commands:')
+print('|cff33ff99XPChronicle|r commands:')
 print(' /avgxp reset - clear data')
 print(' /avgxp graph - toggle graph')
 print(' /avgxp buckets <n> - set graph length (2-24)')
