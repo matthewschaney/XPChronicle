@@ -1,4 +1,6 @@
 # AverageXPClassic
+![Screenshot](screenshot.png)
+  
 [![Version](https://img.shields.io/badge/version-1.0.0-blue?style=flat-square)](https://github.com/<your‑org>/AverageXPClassic/releases/tag/v1.0.0)
 [![WoW Classic 1.15.7](https://img.shields.io/badge/WoW%20Classic‑1.15.7-blue?style=flat-square)](https://worldofwarcraft.blizzard.com/)
 
