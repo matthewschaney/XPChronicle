@@ -2,7 +2,6 @@
 ![In‑game XP window](https://raw.githubusercontent.com/matthewschaney/XPChronicle/main/screenshot.png)
 
 [![Version](https://img.shields.io/github/v/release/matthewschaney/XPChronicle?label=latest&style=flat-square)](https://github.com/matthewschaney/XPChronicle/releases)
-[![WoW Classic 1.15.7](https://img.shields.io/badge/WoW%20Classic‑1.15.7-blue?style=flat-square)](https://worldofwarcraft.blizzard.com/)
 [![Source on GitHub](https://img.shields.io/badge/source-github-black?logo=github&style=flat-square)](https://github.com/matthewschaney/XPChronicle)
 
 A lightweight WoW Classic addon that tracks your experience gains and displays session and lifetime average XP/hour with a visual graph.
