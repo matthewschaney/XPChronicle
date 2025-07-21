@@ -93,15 +93,4 @@ Open issues or feature requests on the **GitHub repo**.
 Starting with **v1.0.0** (July 20 2025) this project is licensed under the  
 **GNU General Public License v3.0 or later (GPL‑3.0‑or‑later)** – see the `LICENSE` file for full terms.
 
-> *Pre‑1.0 development snapshots were never publicly released; all official public builds are GPL‑3.0‑or‑later.*
-
----
-
-## Changelog
-
-### v1.0.0 – 2025‑07‑20
-- Initial public release  
-- Session & lifetime XP tracking  
-- Visual hourly graph  
-- Draggable interface  
-- Configurable bucket count
+> **Note:** A private pre‑release commit briefly referenced the MIT License, but it was never downloaded or distributed. No public build was ever published under MIT, so the GPL‑3.0‑or‑later licence applies to *all* public versions.
