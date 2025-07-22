@@ -1,13 +1,16 @@
 -- Commands.lua
--- Slash-command handling
+-- Slash‑command handling
 XPChronicle = XPChronicle or {}
 XPChronicle.Commands = {}
-local CMD = XPChronicle.Commands
-local DB = XPChronicle.DB
-local UI = XPChronicle.UI
+local CMD   = XPChronicle.Commands
+local DB    = XPChronicle.DB
+local UI    = XPChronicle.UI
 local Graph = XPChronicle.Graph
 
-SLASH_XPCHRONICLE1 = "/avgxp"
+-- register two slash commands: /xpchronicle and /xpchron
+SLASH_XPCHRONICLE1 = "/xpchronicle"
+SLASH_XPCHRONICLE2 = "/xpchron"
+
 SlashCmdList["XPCHRONICLE"] = function(msg)
   msg = (msg or ""):lower():match("^%s*(.-)%s*$")
   
@@ -23,28 +26,19 @@ SlashCmdList["XPCHRONICLE"] = function(msg)
     UI:ToggleGraph()
     
   elseif msg == "minimap" then
-    -- Get MinimapButton module at runtime
     local MB = XPChronicle.MinimapButton
     if not MB then
       print("|cff33ff99XPChronicle|r: Error - MinimapButton module not found")
       return
     end
-    
-    -- Ensure button is created first
     if not MB.button then
       MB:Create()
       MB:HookMinimapUpdate()
     end
-    
     if MB.button then
       local isShown = MB.button:IsShown()
-      if isShown then
-        MB.button:Hide()
-        AvgXPDB.minimapHidden = true
-      else
-        MB.button:Show()
-        AvgXPDB.minimapHidden = false
-      end
+      MB.button:SetShown(not isShown)
+      AvgXPDB.minimapHidden = isShown
       print("|cff33ff99XPChronicle|r: minimap button " .. (isShown and "hidden" or "shown"))
     else
       print("|cff33ff99XPChronicle|r: Error - could not create minimap button")
@@ -62,9 +56,10 @@ SlashCmdList["XPCHRONICLE"] = function(msg)
     
   else
     print("|cff33ff99XPChronicle|r commands:")
-    print(" /avgxp reset – clear all data")
-    print(" /avgxp graph – toggle the graph display")
-    print(" /avgxp minimap – toggle minimap button")
-    print(" /avgxp buckets <n> – set graph length (2–24)")
+    print(" /xpchronicle reset - clear all data")
+    print(" /xpchronicle graph - toggle the graph display")
+    print(" /xpchronicle minimap - toggle minimap button")
+    print(" /xpchronicle buckets <n> - set graph length (2-24)")
+    print(" (alias: /xpchron)")
   end
 end
