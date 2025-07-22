@@ -58,9 +58,7 @@ Logging in automatically starts tracking. The display shows:
 
 ## Compatibility
 
-- **Classic Era** (Season of Discovery, Hardcore)  
-- **Wrath Classic**  
-- **Cataclysm Classic**
+All versions of WoW.
 
 ---
 
