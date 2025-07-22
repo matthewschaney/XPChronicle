@@ -6,7 +6,6 @@ local CMD = XPChronicle.Commands
 local DB = XPChronicle.DB
 local UI = XPChronicle.UI
 local Graph = XPChronicle.Graph
-local MB = XPChronicle.MinimapButton
 
 SLASH_XPCHRONICLE1 = "/avgxp"
 SlashCmdList["XPCHRONICLE"] = function(msg)
@@ -24,6 +23,19 @@ SlashCmdList["XPCHRONICLE"] = function(msg)
     UI:ToggleGraph()
     
   elseif msg == "minimap" then
+    -- Get MinimapButton module at runtime
+    local MB = XPChronicle.MinimapButton
+    if not MB then
+      print("|cff33ff99XPChronicle|r: Error - MinimapButton module not found")
+      return
+    end
+    
+    -- Ensure button is created first
+    if not MB.button then
+      MB:Create()
+      MB:HookMinimapUpdate()
+    end
+    
     if MB.button then
       local isShown = MB.button:IsShown()
       if isShown then
@@ -34,6 +46,8 @@ SlashCmdList["XPCHRONICLE"] = function(msg)
         AvgXPDB.minimapHidden = false
       end
       print("|cff33ff99XPChronicle|r: minimap button " .. (isShown and "hidden" or "shown"))
+    else
+      print("|cff33ff99XPChronicle|r: Error - could not create minimap button")
     end
     
   elseif msg:match("^buckets%s+%d+") then
