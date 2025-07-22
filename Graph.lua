@@ -1,5 +1,5 @@
 -- Graph.lua
--- Bar‑graph construction & refresh
+-- Bar‑graph construction, refresh, and invisible right‑click overlay
 
 XPChronicle = XPChronicle or {}
 XPChronicle.Graph = {}
@@ -12,15 +12,29 @@ local BAR_H = 40
 
 function Graph:Init()
   local g = _G.XPChronicleGraph
-    or CreateFrame("Frame","XPChronicleGraph",UI.back)
+         or CreateFrame("Frame","XPChronicleGraph",UI.back)
   self.frame = g
   g:SetPoint("TOP", UI.back, "BOTTOM", 0, -8)
+
+  if not g._overlay then
+    -- Create a transparent Button on top to catch right‑clicks
+    local overlay = CreateFrame("Button", nil, g)
+    overlay:SetAllPoints(g)
+    overlay:EnableMouse(true)
+    overlay:RegisterForClicks("RightButtonUp")
+    overlay:SetScript("OnClick", function(_, button)
+      if button == "RightButton" then
+        StaticPopup_Show("XPCHRONICLE_SET_TIMELOCK")
+      end
+    end)
+    g._overlay = overlay
+  end
 end
 
 function Graph:BuildBars()
   self:Init()
   local g = self.frame
-  local _, _, lastIx = DB:GetHourlyBuckets()
+  local buckets, starts, lastIx = DB:GetHourlyBuckets()
   local NB  = AvgXPDB.buckets
   local BAR_W = UI.PANEL_W / NB
 
@@ -29,7 +43,7 @@ function Graph:BuildBars()
   if self.texts then for _,o in ipairs(self.texts) do o:Hide() end end
 
   self.bars, self.texts = {}, {}
-  for i = 1, NB do
+  for i=1,NB do
     local bar = CreateFrame("StatusBar", nil, g, "BackdropTemplate")
     bar:SetSize(BAR_W, BAR_H)
     bar:SetOrientation("VERTICAL")
@@ -45,11 +59,11 @@ function Graph:BuildBars()
     self.texts[i] = txt
 
     bar:SetScript("OnEnter", function(self)
-      local idx = Utils.bucketIndexForBar(i, NB, AvgXPDB.lastBucketIx)
-      local xp  = AvgXPDB.hourBuckets[idx] or 0
+      local idx = Utils.bucketIndexForBar(i, NB, lastIx)
+      local xp  = buckets[idx] or 0
       GameTooltip:SetOwner(self,"ANCHOR_RIGHT")
-      GameTooltip:AddLine(date("%H:%M",AvgXPDB.bucketStarts[idx]))
-      GameTooltip:AddLine(string.format("%d XP",xp),1,1,1)
+      GameTooltip:AddLine(date("%H:%M", starts[idx]))
+      GameTooltip:AddLine(string.format("%d XP", xp),1,1,1)
       GameTooltip:Show()
     end)
     bar:SetScript("OnLeave", GameTooltip_Hide)

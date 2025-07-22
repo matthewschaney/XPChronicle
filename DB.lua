@@ -1,6 +1,6 @@
 -- DB.lua
--- XPChronicle: core XP‑tracking, history + bucket management,
--- with timestamp migration & full rebuild-on-resize
+-- XPChronicle: core XP‑tracking, history & bucket management,
+-- with timestamp migration & full rebuild‑on‑resize
 
 XPChronicle = XPChronicle or {}
 XPChronicle.DB = {}
@@ -9,12 +9,11 @@ local DB = XPChronicle.DB
 local BUCKET_SECS = 3600
 local REFRESH     = 1
 
----- 1) BACKFILL any old historyEvents so they gain a numeric .ts
+-- 1) Backfill old historyEvents so they all get a numeric .ts
 function DB:MigrateOldEvents()
   local match = string.match
   for _, ev in ipairs(AvgXPDB.historyEvents or {}) do
     if not ev.ts and ev.day and ev.time then
-      -- expects ev.day = "YYYY-MM-DD", ev.time = "HH:MM:SS"
       local y,mo,d,hh,mm,ss = match(ev.day.." "..ev.time,
         "(%d+)%-(%d+)%-(%d+)%s+(%d+):(%d+):(%d+)"
       )
@@ -33,17 +32,18 @@ function DB:MigrateOldEvents()
   end
 end
 
+-- 2) Init & Reset
 function DB:Init()
   AvgXPDB = AvgXPDB or {}
   if type(AvgXPDB) ~= "table" then AvgXPDB = {} end
 
-  -- core totals + buckets
-  AvgXPDB.totalXP      = AvgXPDB.totalXP      or 0
-  AvgXPDB.totalTime    = AvgXPDB.totalTime    or 0
-  AvgXPDB.buckets      = AvgXPDB.buckets      or 6
-  AvgXPDB.hourBuckets  = AvgXPDB.hourBuckets  or {}
-  AvgXPDB.bucketStarts = AvgXPDB.bucketStarts or {}
-  for i = 1, AvgXPDB.buckets do
+  -- totals & buckets
+  AvgXPDB.totalXP       = AvgXPDB.totalXP       or 0
+  AvgXPDB.totalTime     = AvgXPDB.totalTime     or 0
+  AvgXPDB.buckets       = AvgXPDB.buckets       or 6
+  AvgXPDB.hourBuckets   = AvgXPDB.hourBuckets   or {}
+  AvgXPDB.bucketStarts  = AvgXPDB.bucketStarts  or {}
+  for i=1,AvgXPDB.buckets do
     AvgXPDB.hourBuckets[i]  = AvgXPDB.hourBuckets[i]  or 0
     AvgXPDB.bucketStarts[i] = AvgXPDB.bucketStarts[i]
       or (time() - (AvgXPDB.buckets - i) * BUCKET_SECS)
@@ -54,17 +54,20 @@ function DB:Init()
   AvgXPDB.lastBucketTime = AvgXPDB.bucketStarts[AvgXPDB.lastBucketIx]
   if AvgXPDB.graphHidden == nil then AvgXPDB.graphHidden = false end
 
-  -- history structures
+  -- history & events
   AvgXPDB.history       = AvgXPDB.history       or {}
   AvgXPDB.historyEvents = AvgXPDB.historyEvents or {}
   AvgXPDB.historyMode   = AvgXPDB.historyMode   or "hour"
 
-  -- frame locks & minimap state
+  -- frame locks & minimap pos
   AvgXPDB.mainLocked    = AvgXPDB.mainLocked    == nil and false or AvgXPDB.mainLocked
   AvgXPDB.historyLocked = AvgXPDB.historyLocked == nil and false or AvgXPDB.historyLocked
   AvgXPDB.minimapPos    = AvgXPDB.minimapPos    or {}
 
-  -- backfill old events so they can be rebuilt
+  -- time‑lock offset (defaults to now % hour)
+  AvgXPDB.gridOffset    = AvgXPDB.gridOffset or (time() % BUCKET_SECS)
+
+  -- backfill old events
   self:MigrateOldEvents()
 
   -- session internals
@@ -79,6 +82,7 @@ function DB:Reset()
   self:Init()
 end
 
+-- 3) Rotate buckets
 function DB:Rotate()
   while (time() - AvgXPDB.lastBucketTime) >= BUCKET_SECS do
     AvgXPDB.lastBucketTime = AvgXPDB.lastBucketTime + BUCKET_SECS
@@ -88,6 +92,7 @@ function DB:Rotate()
   end
 end
 
+-- 4) Add & log
 function DB:Add(xp)
   AvgXPDB.hourBuckets[AvgXPDB.lastBucketIx] =
     (AvgXPDB.hourBuckets[AvgXPDB.lastBucketIx] or 0) + xp
@@ -97,11 +102,10 @@ function DB:LogHistory(xp)
   local t   = time()
   local day = date("%Y-%m-%d", t)
   local hr  = date("%H:00",    t)
-  AvgXPDB.history[day]     = AvgXPDB.history[day]     or {}
-  AvgXPDB.history[day][hr] = (AvgXPDB.history[day][hr] or 0) + xp
+  AvgXPDB.history[day]       = AvgXPDB.history[day]       or {}
+  AvgXPDB.history[day][hr]   = (AvgXPDB.history[day][hr] or 0) + xp
 end
 
--- stamp every new event with a real ts
 function DB:LogEvent(xp)
   local t       = time()
   local day     = date("%Y-%m-%d", t)
@@ -114,21 +118,21 @@ function DB:LogEvent(xp)
   })
 end
 
--- rebuild **all** buckets from every event’s ts
+-- 5) Rebuild all buckets from entire historyEvents (snapped by gridOffset)
 function DB:RebuildBuckets()
-  local now  = time()
-  local n    = AvgXPDB.buckets
-  local sec  = BUCKET_SECS
+  local now    = time()
+  local n      = AvgXPDB.buckets
+  local sec    = BUCKET_SECS
+  local offset = AvgXPDB.gridOffset or 0
+  local base   = now - ((now - offset) % sec)
 
-  -- reset starts & zero counts
-  for i = 1, n do
-    AvgXPDB.bucketStarts[i] = now - (n - i) * sec
+  for i=1,n do
+    AvgXPDB.bucketStarts[i] = base - (n - i) * sec
     AvgXPDB.hourBuckets[i]  = 0
   end
   AvgXPDB.lastBucketIx   = n
   AvgXPDB.lastBucketTime = AvgXPDB.bucketStarts[n]
 
-  -- fold in every logged event
   for _, ev in ipairs(AvgXPDB.historyEvents) do
     local ts = ev.ts
     if ts and ts >= AvgXPDB.bucketStarts[1] then
@@ -140,24 +144,13 @@ function DB:RebuildBuckets()
   end
 end
 
--- when you change how many buckets you want, rebuild instead of wiping
+-- 6) Override SetBuckets to rebuild
 function DB:SetBuckets(n)
   AvgXPDB.buckets = n
-
-  -- resize the arrays
-  for i = #AvgXPDB.hourBuckets+1, n do
-    AvgXPDB.hourBuckets[i]  = 0
-    AvgXPDB.bucketStarts[i] = time() - (n - i) * BUCKET_SECS
-  end
-  for i = n+1, #AvgXPDB.hourBuckets do
-    AvgXPDB.hourBuckets[i]   = nil
-    AvgXPDB.bucketStarts[i]  = nil
-  end
-
-  -- now refill every bucket from the full event log
   self:RebuildBuckets()
 end
 
+-- 7) Session & logout
 function DB:StartSession()
   self._startXP   = UnitXP("player")
   self._startTime = time()
@@ -192,6 +185,7 @@ function DB:OnUpdate(dt)
   end
 end
 
+-- 8) Rates & accessors
 function DB:GetSessionRate()
   local elapsed = math.max(time() - self._startTime, 1)
   return self._sessionXP / (elapsed / 3600)
@@ -209,6 +203,6 @@ end
 
 function DB:GetMaxBucket()
   local m = 1
-  for _,v in ipairs(AvgXPDB.hourBuckets) do m = math.max(m, v or 0) end
+  for _, v in ipairs(AvgXPDB.hourBuckets) do m = math.max(m, v or 0) end
   return m
 end
