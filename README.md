@@ -27,7 +27,7 @@ A lightweight WoW Classic addon that tracks your experience gains and displays 
 3. Restart WoW Classic or type `/reload` in‑game.
 
 ### CurseForge / Wago
-Grab it on **[CurseForge](#)** or **[Wago](#)** for automatic updates.
+Grab it on **[CurseForge](https://www.curseforge.com/wow/addons/xpchronicle)** or **[Wago](https://addons.wago.io/addons/xpchronicle)** for automatic updates.
 
 ---
 
