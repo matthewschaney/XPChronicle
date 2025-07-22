@@ -29,9 +29,11 @@ function UI:CreateMainPanel()
 
   back:ClearAllPoints()
   if AvgXPDB.pos then
-    back:SetPoint(AvgXPDB.pos.point, UIParent,
-                 AvgXPDB.pos.relativePoint,
-                 AvgXPDB.pos.x, AvgXPDB.pos.y)
+    back:SetPoint(
+      AvgXPDB.pos.point, UIParent,
+      AvgXPDB.pos.relativePoint,
+      AvgXPDB.pos.x, AvgXPDB.pos.y
+    )
   else
     back:SetPoint("CENTER", 0, 200)
   end
@@ -47,10 +49,9 @@ end
 function UI:UpdateLabel()
   local sAvg = DB:GetSessionRate()
   local oAvg = DB:GetOverallRate()
-  local fmt  = Utils.fmt
   self.back.label:SetText(
-    "Session: " .. fmt(sAvg) .. " XP/h\n\n" ..
-    "Overall: " .. fmt(oAvg) .. " XP/h"
+    "Session: " .. Utils.fmt(sAvg) .. " XP/h\n\n" ..
+    "Overall: " .. Utils.fmt(oAvg) .. " XP/h"
   )
 end
 

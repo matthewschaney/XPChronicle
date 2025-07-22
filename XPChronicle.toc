@@ -10,4 +10,6 @@ DB.lua
 UI.lua
 Graph.lua
 Commands.lua
+MinimapButton.lua
+History.lua
 Core.lua

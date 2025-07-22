@@ -1,5 +1,5 @@
 -- DB.lua
--- Saved‑variable setup, bucket rotation, session tracking
+-- Saved‑variable setup, bucket rotation, session tracking, and history logging
 
 XPChronicle = XPChronicle or {}
 XPChronicle.DB = {}
@@ -11,22 +11,31 @@ local REFRESH     = 1
 function DB:Init()
   AvgXPDB = AvgXPDB or {}
   if type(AvgXPDB) ~= "table" then AvgXPDB = {} end
+
+  -- core xp/hr data
   AvgXPDB.totalXP    = AvgXPDB.totalXP    or 0
   AvgXPDB.totalTime  = AvgXPDB.totalTime  or 0
   AvgXPDB.buckets    = AvgXPDB.buckets    or 6
   AvgXPDB.hourBuckets  = AvgXPDB.hourBuckets  or {}
   AvgXPDB.bucketStarts = AvgXPDB.bucketStarts or {}
+
   for i = 1, AvgXPDB.buckets do
     AvgXPDB.hourBuckets[i]  = AvgXPDB.hourBuckets[i]  or 0
     AvgXPDB.bucketStarts[i] = AvgXPDB.bucketStarts[i]
       or (time() - (AvgXPDB.buckets - i) * BUCKET_SECS)
   end
+
   AvgXPDB.lastBucketIx   = AvgXPDB.lastBucketIx
     and math.min(AvgXPDB.lastBucketIx, AvgXPDB.buckets)
     or AvgXPDB.buckets
   AvgXPDB.lastBucketTime = AvgXPDB.bucketStarts[AvgXPDB.lastBucketIx]
+
   if AvgXPDB.graphHidden == nil then AvgXPDB.graphHidden = false end
 
+  -- history table keyed by "YYYY‑MM‑DD" → list of { time="HH:MM:SS", xp=number }
+  AvgXPDB.history = AvgXPDB.history or {}
+
+  -- session internals
   self._acc       = 0
   self._sessionXP = 0
   self._startXP   = 0
@@ -52,6 +61,17 @@ function DB:Add(xp)
     (AvgXPDB.hourBuckets[AvgXPDB.lastBucketIx] or 0) + xp
 end
 
+function DB:LogHistory(xp)
+  local t = time()
+  local day = date("%Y-%m-%d", t)
+  local hist = AvgXPDB.history
+  hist[day] = hist[day] or {}
+  table.insert(hist[day], {
+    time = date("%H:%M:%S", t),
+    xp   = xp
+  })
+end
+
 function DB:StartSession()
   self._startXP   = UnitXP("player")
   self._startTime = time()
@@ -66,7 +86,9 @@ function DB:OnXPUpdate()
   end
   self._sessionXP = self._sessionXP + gain
   self._startXP   = cur
+
   self:Add(gain)
+  self:LogHistory(gain)
 end
 
 function DB:OnLogout()
@@ -89,7 +111,7 @@ function DB:GetSessionRate()
 end
 
 function DB:GetOverallRate()
-  local elapsed = (AvgXPDB.totalTime + (time() - self._startTime))
+  local elapsed = AvgXPDB.totalTime + (time() - self._startTime)
   if elapsed <= 0 then return 0 end
   return (AvgXPDB.totalXP + self._sessionXP) / (elapsed / 3600)
 end

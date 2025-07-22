@@ -20,8 +20,8 @@ end
 function Graph:BuildBars()
   self:Init()
   local g = self.frame
-  local buckets, starts, lastIx = DB:GetHourlyBuckets()
-  local NB = AvgXPDB.buckets
+  local _, _, lastIx = DB:GetHourlyBuckets()
+  local NB  = AvgXPDB.buckets
   local BAR_W = UI.PANEL_W / NB
 
   g:SetSize(UI.PANEL_W, BAR_H)

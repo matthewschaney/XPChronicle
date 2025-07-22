@@ -31,8 +31,8 @@ SlashCmdList["XPCHRONICLE"] = function(msg)
     end
   else
     print("|cff33ff99XPChronicle|r commands:")
-    print(" /avgxp reset   – clear all data")
-    print(" /avgxp graph   – toggle the graph display")
+    print(" /avgxp reset       – clear all data")
+    print(" /avgxp graph       – toggle the graph display")
     print(" /avgxp buckets <n> – set graph length (2–24)")
   end
 end
