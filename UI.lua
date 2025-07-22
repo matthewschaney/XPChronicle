@@ -28,8 +28,9 @@ local function InitializeMainMenu()
 end
 
 function UI:CreateMainPanel()
-  local back = _G.AXPChronicleDisplay
-    or CreateFrame("Frame", "XPChronicleDisplay", UIParent, "BackdropTemplate")
+  -- look up by the correct global name, so we never CreateFrame twice
+  local back = _G["XPChronicleDisplay"]
+             or CreateFrame("Frame", "XPChronicleDisplay", UIParent, "BackdropTemplate")
   self.back = back
 
   -- appearance
