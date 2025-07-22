@@ -9,7 +9,7 @@ local DB = XPChronicle.DB
 local BUCKET_SECS = 3600
 local REFRESH     = 1
 
--- 1) Backfill old historyEvents so they all get a numeric .ts
+-- 1) Backfill old historyEvents so they all get a .ts
 function DB:MigrateOldEvents()
   local match = string.match
   for _, ev in ipairs(AvgXPDB.historyEvents or {}) do
@@ -64,8 +64,8 @@ function DB:Init()
   AvgXPDB.historyLocked = AvgXPDB.historyLocked == nil and false or AvgXPDB.historyLocked
   AvgXPDB.minimapPos    = AvgXPDB.minimapPos    or {}
 
-  -- time‑lock offset (defaults to now % hour)
-  AvgXPDB.gridOffset    = AvgXPDB.gridOffset or (time() % BUCKET_SECS)
+  -- time‑lock offset (defaults to 0 past the hour)
+  AvgXPDB.gridOffset    = AvgXPDB.gridOffset or 0
 
   -- backfill old events
   self:MigrateOldEvents()
@@ -78,7 +78,12 @@ function DB:Init()
 end
 
 function DB:Reset()
+  -- preserve any user‑set gridOffset across resets
+  local oldOffset = AvgXPDB and AvgXPDB.gridOffset
   AvgXPDB = {}
+  if oldOffset then
+    AvgXPDB.gridOffset = oldOffset
+  end
   self:Init()
 end
 
