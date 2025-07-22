@@ -1,6 +1,6 @@
 ## Changelog
 
-### v1.2.0 – 2025-07-21
+### v1.2.0 – 2025-07-22
 - Updated slash commands
 - Moved the icon to being locked to the minimap
 - Window positions are remembered
