@@ -1,10 +1,10 @@
 -- History.lua
--- The scrollable “tome” window showing every XP gain by date & time
+-- Scrollable “tome” window with toggle buttons for event/hour/day
 
 XPChronicle = XPChronicle or {}
 XPChronicle.History = {}
-local H    = XPChronicle.History
-local UI   = XPChronicle.UI
+local H  = XPChronicle.History
+local UI = XPChronicle.UI
 
 function H:Create()
   if self.frame then return end
@@ -23,12 +23,29 @@ function H:Create()
   f:SetScript("OnDragStart", f.StartMoving)
   f:SetScript("OnDragStop", f.StopMovingOrSizing)
 
+  -- Title
   local title = f:CreateFontString(nil,"OVERLAY","GameFontNormalLarge")
   title:SetPoint("TOP",0,-10)
   title:SetText("XP Chronicle History")
 
+  -- Mode buttons
+  self.modes = {}
+  for i, modeTitle in ipairs({"Event","Hour","Day"}) do
+    local m = modeTitle:lower()
+    local btn = CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
+    btn:SetSize(60,20)
+    btn:SetPoint("TOPLEFT", f, "TOPLEFT", 20 + (i-1)*70, -30)
+    btn:SetText(modeTitle)
+    btn:SetScript("OnClick", function()
+      AvgXPDB.historyMode = m
+      H:Update()
+    end)
+    self.modes[m] = btn
+  end
+
+  -- ScrollFrame
   local scroll = CreateFrame("ScrollFrame","XPChronicleHistoryScrollFrame",f,"UIPanelScrollFrameTemplate")
-  scroll:SetPoint("TOPLEFT", f, "TOPLEFT", 20, -40)
+  scroll:SetPoint("TOPLEFT", f, "TOPLEFT", 20, -60)
   scroll:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -40, 20)
 
   local content = CreateFrame("Frame","XPChronicleHistoryContent",scroll)
@@ -52,33 +69,92 @@ end
 
 function H:Update()
   local content = self.content
+  -- clear old lines
   for _, child in ipairs({content:GetChildren()}) do
     child:Hide()
     child:SetParent(nil)
   end
 
-  local hist = AvgXPDB.history or {}
-  local days = {}
-  for day in pairs(hist) do tinsert(days, day) end
-  table.sort(days, function(a,b) return a > b end)
+  -- highlight active button
+  local mode = AvgXPDB.historyMode or "hour"
+  for m,btn in pairs(self.modes) do
+    if m == mode then btn:Disable() else btn:Enable() end
+  end
 
   local y = 0
-  for _, day in ipairs(days) do
-    local header = content:CreateFontString(nil,"OVERLAY","GameFontNormal")
-    header:SetPoint("TOPLEFT", 0, -y)
-    header:SetText(day)
-    y = y + header:GetStringHeight() + 5
 
-    local entries = hist[day]
-    table.sort(entries, function(a,b) return a.time < b.time end)
-    for _, e in ipairs(entries) do
-      local line = content:CreateFontString(nil,"OVERLAY","GameFontHighlightSmall")
-      line:SetPoint("TOPLEFT", 0, -y)
-      line:SetText(("  [%s] +%d XP"):format(e.time, e.xp))
-      y = y + line:GetStringHeight() + 3
+  if mode == "event" then
+    -- raw events grouped by day
+    local days = {}
+    for _, ev in ipairs(AvgXPDB.historyEvents or {}) do
+      days[ev.day] = days[ev.day] or {}
+      table.insert(days[ev.day], ev)
+    end
+    local dayKeys = {}
+    for d in pairs(days) do table.insert(dayKeys, d) end
+    table.sort(dayKeys, function(a,b) return a > b end)
+
+    for _, day in ipairs(dayKeys) do
+      local hdr = content:CreateFontString(nil,"OVERLAY","GameFontNormal")
+      hdr:SetPoint("TOPLEFT", 0, -y)
+      hdr:SetText(day)
+      y = y + hdr:GetStringHeight() + 5
+
+      table.sort(days[day], function(a,b) return a.time < b.time end)
+      for _, ev in ipairs(days[day]) do
+        local line = content:CreateFontString(nil,"OVERLAY","GameFontHighlightSmall")
+        line:SetPoint("TOPLEFT", 0, -y)
+        line:SetText(("  [%s] +%d XP"):format(ev.time, ev.xp))
+        y = y + line:GetStringHeight() + 3
+      end
+
+      y = y + 10
     end
 
-    y = y + 10
+  elseif mode == "hour" then
+    -- per-hour aggregates
+    local hist = AvgXPDB.history or {}
+    local dayKeys = {}
+    for d in pairs(hist) do table.insert(dayKeys, d) end
+    table.sort(dayKeys, function(a,b) return a > b end)
+
+    for _, day in ipairs(dayKeys) do
+      local hdr = content:CreateFontString(nil,"OVERLAY","GameFontNormal")
+      hdr:SetPoint("TOPLEFT", 0, -y)
+      hdr:SetText(day)
+      y = y + hdr:GetStringHeight() + 5
+
+      local hours = {}
+      for hr in pairs(hist[day]) do table.insert(hours, hr) end
+      table.sort(hours)
+
+      for _, hr in ipairs(hours) do
+        local xp = hist[day][hr]
+        local line = content:CreateFontString(nil,"OVERLAY","GameFontHighlightSmall")
+        line:SetPoint("TOPLEFT", 0, -y)
+        line:SetText(("  [%s] +%d XP"):format(hr, xp))
+        y = y + line:GetStringHeight() + 3
+      end
+
+      y = y + 10
+    end
+
+  elseif mode == "day" then
+    -- daily totals
+    local hist = AvgXPDB.history or {}
+    local dayKeys = {}
+    for d in pairs(hist) do table.insert(dayKeys, d) end
+    table.sort(dayKeys, function(a,b) return a > b end)
+
+    for _, day in ipairs(dayKeys) do
+      local total = 0
+      for _, xp in pairs(hist[day]) do total = total + xp end
+
+      local line = content:CreateFontString(nil,"OVERLAY","GameFontNormal")
+      line:SetPoint("TOPLEFT", 0, -y)
+      line:SetText(("%s: +%d XP"):format(day, total))
+      y = y + line:GetStringHeight() + 5
+    end
   end
 
   content:SetHeight(y)

@@ -1,5 +1,5 @@
 -- DB.lua
--- Saved‑variable setup, bucket rotation, session tracking, and history logging
+-- Saved‑variable setup, bucket rotation, session tracking, hour aggregates, raw events, historyMode
 
 XPChronicle = XPChronicle or {}
 XPChronicle.DB = {}
@@ -32,8 +32,12 @@ function DB:Init()
 
   if AvgXPDB.graphHidden == nil then AvgXPDB.graphHidden = false end
 
-  -- history table keyed by "YYYY‑MM‑DD" → list of { time="HH:MM:SS", xp=number }
-  AvgXPDB.history = AvgXPDB.history or {}
+  -- history: per-hour aggregates
+  AvgXPDB.history       = AvgXPDB.history       or {}
+  -- raw event log
+  AvgXPDB.historyEvents = AvgXPDB.historyEvents or {}
+  -- view mode: "event", "hour", or "day"
+  AvgXPDB.historyMode   = AvgXPDB.historyMode   or "hour"
 
   -- session internals
   self._acc       = 0
@@ -62,13 +66,21 @@ function DB:Add(xp)
 end
 
 function DB:LogHistory(xp)
-  local t = time()
+  local t   = time()
   local day = date("%Y-%m-%d", t)
-  local hist = AvgXPDB.history
-  hist[day] = hist[day] or {}
-  table.insert(hist[day], {
-    time = date("%H:%M:%S", t),
-    xp   = xp
+  local hr  = date("%H:00",    t)
+  AvgXPDB.history[day]       = AvgXPDB.history[day]       or {}
+  AvgXPDB.history[day][hr]   = (AvgXPDB.history[day][hr] or 0) + xp
+end
+
+function DB:LogEvent(xp)
+  local t       = time()
+  local day     = date("%Y-%m-%d",   t)
+  local timestr = date("%H:%M:%S",   t)
+  table.insert(AvgXPDB.historyEvents, {
+    day  = day,
+    time = timestr,
+    xp   = xp,
   })
 end
 
@@ -89,11 +101,12 @@ function DB:OnXPUpdate()
 
   self:Add(gain)
   self:LogHistory(gain)
+  self:LogEvent(gain)
 end
 
 function DB:OnLogout()
   local t = time() - self._startTime
-  AvgXPDB.totalXP   = AvgXPDB.totalXP + self._sessionXP
+  AvgXPDB.totalXP   = AvgXPDB.totalXP   + self._sessionXP
   AvgXPDB.totalTime = AvgXPDB.totalTime + t
 end
 
