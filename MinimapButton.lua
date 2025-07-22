@@ -95,7 +95,7 @@ function MB:Create()
   -- Tooltip
   b:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-    GameTooltip:AddLine("XP Chronicle", 0.2, 0.8, 1)
+    GameTooltip:AddLine("XPChronicle", 0.2, 0.8, 1)
     GameTooltip:AddLine("Left-click to view XP history", 1, 1, 1)
     GameTooltip:AddLine("Drag to reposition", 1, 1, 1)
     GameTooltip:Show()
