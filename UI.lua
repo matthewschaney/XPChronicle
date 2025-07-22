@@ -1,5 +1,5 @@
 -- UI.lua
--- Main panel creation, label updates, toggle graph
+-- Main panel creation, label updates, toggle graph, and right‑click lock/unlock
 
 XPChronicle = XPChronicle or {}
 XPChronicle.UI = {}
@@ -10,36 +10,72 @@ local Utils = XPChronicle.Utils
 UI.PANEL_W = 200
 UI.PANEL_H = 56
 
+-- Initialize the right‑click lock menu (only once)
+local function InitializeMainMenu()
+  if UI.mainMenu then return end
+  UI.mainMenu = CreateFrame("Frame", "XPChronicleMainMenu", UIParent, "UIDropDownMenuTemplate")
+  UIDropDownMenu_Initialize(UI.mainMenu, function(self, level)
+    local info = UIDropDownMenu_CreateInfo()
+    info.text    = "Lock Frame"
+    info.checked = AvgXPDB.mainLocked
+    info.func   = function()
+      AvgXPDB.mainLocked = not AvgXPDB.mainLocked
+      UI.back:SetMovable(not AvgXPDB.mainLocked)
+      if AvgXPDB.mainLocked then UI.back:StopMovingOrSizing() end
+    end
+    UIDropDownMenu_AddButton(info, level)
+  end)
+end
+
 function UI:CreateMainPanel()
   local back = _G.AXPChronicleDisplay
-    or CreateFrame("Frame","XPChronicleDisplay",UIParent,"BackdropTemplate")
+    or CreateFrame("Frame", "XPChronicleDisplay", UIParent, "BackdropTemplate")
   self.back = back
 
+  -- appearance
   back:SetSize(self.PANEL_W, self.PANEL_H)
   back:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8" })
   back:SetBackdropColor(0,0,0,0.55)
-  back:SetMovable(true); back:EnableMouse(true)
+
+  -- mouse & drag setup
+  back:EnableMouse(true)
   back:RegisterForDrag("LeftButton")
-  back:SetScript("OnDragStart", back.StartMoving)
+  back:SetMovable(not AvgXPDB.mainLocked)
+
+  back:SetScript("OnDragStart", function(self, button)
+    if button == "LeftButton" and not AvgXPDB.mainLocked then
+      self:StartMoving()
+    end
+  end)
   back:SetScript("OnDragStop", function(self)
-    self:StopMovingOrSizing()
-    local p, _, rp, x, y = self:GetPoint()
-    AvgXPDB.pos = { point = p, relativePoint = rp, x = x, y = y }
+    if not AvgXPDB.mainLocked then
+      self:StopMovingOrSizing()
+      local p, _, rp, x, y = self:GetPoint()
+      AvgXPDB.pos = { point = p, relativePoint = rp, x = x, y = y }
+    end
   end)
 
+  -- right‑click opens lock toggle
+  InitializeMainMenu()
+  back:SetScript("OnMouseUp", function(self, button)
+    if button == "RightButton" then
+      ToggleDropDownMenu(1, nil, UI.mainMenu, "cursor")
+    end
+  end)
+
+  -- restore last position or default
   back:ClearAllPoints()
   if AvgXPDB.pos then
-    back:SetPoint(
-      AvgXPDB.pos.point, UIParent,
-      AvgXPDB.pos.relativePoint,
-      AvgXPDB.pos.x, AvgXPDB.pos.y
-    )
+    back:SetPoint(AvgXPDB.pos.point, UIParent,
+                  AvgXPDB.pos.relativePoint,
+                  AvgXPDB.pos.x, AvgXPDB.pos.y)
   else
     back:SetPoint("CENTER", 0, 200)
   end
 
+  -- label
   local label = back.label
-    or back:CreateFontString(nil,"OVERLAY","GameFontNormalLarge")
+    or back:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
   back.label = label
   label:SetPoint("CENTER")
   label:SetWidth(self.PANEL_W)

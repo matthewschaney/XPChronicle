@@ -1,5 +1,6 @@
 -- DB.lua
--- (unchanged from previous; included for context)
+-- Core XP‐tracking storage, session logic, history and bucket management,
+-- plus saved frame‐lock flags and minimap position.
 
 XPChronicle = XPChronicle or {}
 XPChronicle.DB = {}
@@ -13,26 +14,33 @@ function DB:Init()
   if type(AvgXPDB) ~= "table" then AvgXPDB = {} end
 
   -- core xp/hr data
-  AvgXPDB.totalXP    = AvgXPDB.totalXP    or 0
-  AvgXPDB.totalTime  = AvgXPDB.totalTime  or 0
-  AvgXPDB.buckets    = AvgXPDB.buckets    or 6
-  AvgXPDB.hourBuckets  = AvgXPDB.hourBuckets  or {}
-  AvgXPDB.bucketStarts = AvgXPDB.bucketStarts or {}
+  AvgXPDB.totalXP       = AvgXPDB.totalXP       or 0
+  AvgXPDB.totalTime     = AvgXPDB.totalTime     or 0
+  AvgXPDB.buckets       = AvgXPDB.buckets       or 6
+  AvgXPDB.hourBuckets   = AvgXPDB.hourBuckets   or {}
+  AvgXPDB.bucketStarts  = AvgXPDB.bucketStarts  or {}
   for i = 1, AvgXPDB.buckets do
-    AvgXPDB.hourBuckets[i]  = AvgXPDB.hourBuckets[i]  or 0
-    AvgXPDB.bucketStarts[i] = AvgXPDB.bucketStarts[i]
+    AvgXPDB.hourBuckets[i]   = AvgXPDB.hourBuckets[i]   or 0
+    AvgXPDB.bucketStarts[i]  = AvgXPDB.bucketStarts[i]
       or (time() - (AvgXPDB.buckets - i) * BUCKET_SECS)
   end
-  AvgXPDB.lastBucketIx   = AvgXPDB.lastBucketIx
+  AvgXPDB.lastBucketIx    = AvgXPDB.lastBucketIx
     and math.min(AvgXPDB.lastBucketIx, AvgXPDB.buckets)
     or AvgXPDB.buckets
-  AvgXPDB.lastBucketTime = AvgXPDB.bucketStarts[AvgXPDB.lastBucketIx]
+  AvgXPDB.lastBucketTime  = AvgXPDB.bucketStarts[AvgXPDB.lastBucketIx]
   if AvgXPDB.graphHidden == nil then AvgXPDB.graphHidden = false end
 
   -- history structures
-  AvgXPDB.history       = AvgXPDB.history       or {}   -- per‑hour aggregates
-  AvgXPDB.historyEvents = AvgXPDB.historyEvents or {}   -- raw xp‑gain events
-  AvgXPDB.historyMode   = AvgXPDB.historyMode   or "hour" -- view mode
+  AvgXPDB.history         = AvgXPDB.history         or {}
+  AvgXPDB.historyEvents   = AvgXPDB.historyEvents   or {}
+  AvgXPDB.historyMode     = AvgXPDB.historyMode     or "hour"
+
+  -- frame‐lock defaults
+  if AvgXPDB.mainLocked    == nil then AvgXPDB.mainLocked    = false end
+  if AvgXPDB.historyLocked == nil then AvgXPDB.historyLocked = false end
+
+  -- minimap button position
+  AvgXPDB.minimapPos      = AvgXPDB.minimapPos or {}
 
   -- session internals
   self._acc       = 0
