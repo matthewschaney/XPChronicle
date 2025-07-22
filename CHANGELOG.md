@@ -1,6 +1,18 @@
 ## Changelog
 
-### v1.1 – 2025-07-21
+### v1.2.0 – 2025-07-21
+- Updated slash commands
+- Moved the icon to being locked to the minimap
+- Window positions are remembered
+- Lock/unlock enabled
+- Buckets now fill dynamically and do not lose data
+- Bucket grid can be set manually by right clicking
+- New graphs automatically set to 0:00 on the hour
+- Fixed a problem with the frame when resetting
+- Changed the overall XP to time left to level
+- Added prediction mode, showing how long until you will level in the graph
+
+### v1.1.0 – 2025-07-21
 - Added “Tome of XP” history window with Event, Hour, and Day toggleable views  
 - Introduced minimap button to open/close the XP history window  
 

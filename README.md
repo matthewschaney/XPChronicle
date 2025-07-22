@@ -1,5 +1,5 @@
 # XPChronicle
-![In‑game XP window](https://raw.githubusercontent.com/matthewschaney/XPChronicle/main/screenshot.png)
+![In‑game XP window](https://raw.githubusercontent.com/matthewschaney/XPChronicle/main/xpchronicle-logo.png)
 
 [![Version](https://img.shields.io/github/v/release/matthewschaney/XPChronicle?label=latest&style=flat-square)](https://github.com/matthewschaney/XPChronicle/releases)
 [![Source on GitHub](https://img.shields.io/badge/source-github-black?logo=github&style=flat-square)](https://github.com/matthewschaney/XPChronicle)
@@ -41,12 +41,13 @@ Logging in automatically starts tracking. The display shows:
 
 ### Slash Commands
 
-| Command | Action |
-|---------|--------|
-| `/avgxp` | Show command list |
-| `/avgxp reset` | Clear **all** tracking data |
-| `/avgxp graph` | Toggle graph on/off |
-| `/avgxp buckets <2‑24>` | Set number of hourly buckets |
+| Command                             | Action                            |
+|-------------------------------------|-----------------------------------|
+| `/xpchronicle` **or** `/xpchron`    | Show command list                 |
+| `/xpchronicle reset`                | Clear **all** tracking data       |
+| `/xpchronicle graph`                | Toggle graph on/off               |
+| `/xpchronicle minimap`              | Toggle minimap button             |
+| `/xpchronicle buckets <2‑24>`       | Set number of hourly buckets      |
 
 ### Interface Tips
 
@@ -72,13 +73,13 @@ Additional in‑game screenshots are available in the CurseForge gallery.
 ## FAQ
 
 **Q: Does this work on retail WoW?**  
-A: No—Classic clients only.
+A: Yes, this addon runs on all versions of WoW.
 
 **Q: Is data saved when I log out?**  
 A: Yes, per‑character and persistent.
 
 **Q: Can I reset just the session data?**  
-A: Session resets on login; `/avgxp reset` clears everything.
+A: Session resets on login; `/xpchron reset` clears everything.
 
 ---
 
