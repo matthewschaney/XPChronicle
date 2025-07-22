@@ -1,4 +1,4 @@
--- Graph.lua
+-- Graph.lua (Fixed version)
 -- Bar‑graph construction, refresh, and right‑click toggle Prediction Mode
 -- (fixed bucket count; composite current‑hour; projected red bars)
 
@@ -80,9 +80,16 @@ end
 function Graph:Refresh()
   local buckets, starts, lastIx = DB:GetHourlyBuckets()
   local NB = AvgXPDB.buckets
+  local BAR_W = UI.PANEL_W / NB  -- Define BAR_W at the top so it's available throughout
 
-  -- Rebuild if needed
-  if not self.bars or #self.bars ~= NB then
+  -- Store last known bucket index to detect rotation
+  if not self.lastKnownBucketIx then
+    self.lastKnownBucketIx = lastIx
+  end
+
+  -- Rebuild if needed (bucket count changed or bucket rotated)
+  if not self.bars or #self.bars ~= NB or self.lastKnownBucketIx ~= lastIx then
+    self.lastKnownBucketIx = lastIx
     self:BuildBars()
     return
   end
@@ -149,7 +156,9 @@ function Graph:Refresh()
   -- 1) Historical buckets (left side)
   ----------------------------------------------------------------
   for i = 1, historyBuckets - 1 do
-    local histIdx = ((lastIx - (historyBuckets - i) - 1) % NB) + 1
+    -- Calculate which bucket from history to show
+    local offset = historyBuckets - i
+    local histIdx = ((lastIx - offset - 1) % NB) + 1
     local xp = buckets[histIdx] or 0
     
     self.bars[i]:Show()
@@ -162,9 +171,10 @@ function Graph:Refresh()
     self.texts[i]:SetText(date("%H:%M", starts[histIdx]))
     
     -- Tooltip
+    local capturedIdx = histIdx  -- Capture for closure
     self.bars[i]:SetScript("OnEnter", function(self)
       GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-      GameTooltip:AddLine(date("%H:%M", starts[histIdx]))
+      GameTooltip:AddLine(date("%H:%M", starts[capturedIdx]))
       GameTooltip:AddLine(string.format("%d XP", xp), 1,1,1)
       GameTooltip:Show()
     end)
@@ -174,13 +184,14 @@ function Graph:Refresh()
   ----------------------------------------------------------------
   -- 2) Current bucket (partial blue, partial red)
   ----------------------------------------------------------------
+  local BAR_W = UI.PANEL_W / NB  -- Calculate BAR_W here
   local currentBarIdx = historyBuckets
   local currentXP = buckets[lastIx] or 0
   
-  -- For the current bucket, we need to calculate expected XP based on time elapsed
-  local expectedXPSoFar = sAvg * fractionOfCurrentBucket
+  -- For the current bucket, calculate expected total XP for the full hour
   local remainingTimeInBucket = 1 - fractionOfCurrentBucket
   local expectedXPRemaining = sAvg * remainingTimeInBucket
+  local totalExpectedForHour = currentXP + math.min(expectedXPRemaining, remainXP)
   
   -- Blue part: actual XP earned
   self.bars[currentBarIdx]:Show()
@@ -189,24 +200,29 @@ function Graph:Refresh()
   self.bars[currentBarIdx]:GetStatusBarTexture():SetVertexColor(0.2,0.8,1)
   
   -- Red part: predicted XP for rest of this hour
+  -- The red bar should show the TOTAL expected for the hour, not just the remaining part
   self.redBars[currentBarIdx]:Show()
-  self.redBars[currentBarIdx]:SetMinMaxValues(0, maxVal)
-  self.redBars[currentBarIdx]:SetValue(math.min(expectedXPRemaining, remainXP))
-  
-  -- Position red bar above blue
+  self.redBars[currentBarIdx]:SetBackdropColor(0,0,0,0)  -- Transparent background since blue provides it
   self.redBars[currentBarIdx]:ClearAllPoints()
-  local blueHeight = (currentXP / maxVal) * BAR_H
-  self.redBars[currentBarIdx]:SetPoint("BOTTOMLEFT", self.frame, "BOTTOMLEFT", 
-                                       (currentBarIdx-1)*(UI.PANEL_W/NB), blueHeight)
+  self.redBars[currentBarIdx]:SetPoint("BOTTOMLEFT", g, "BOTTOMLEFT", (currentBarIdx-1)*BAR_W, 0)
+  self.redBars[currentBarIdx]:SetMinMaxValues(0, maxVal)
+  self.redBars[currentBarIdx]:SetValue(totalExpectedForHour)
+  
+  -- Make sure the red bar renders behind the blue bar
+  self.redBars[currentBarIdx]:SetFrameLevel(self.bars[currentBarIdx]:GetFrameLevel() - 1)
   
   self.texts[currentBarIdx]:SetText(date("%H:%M", starts[lastIx]))
   
   -- Tooltip for current bucket
+  local capturedCurrentXP = currentXP
+  local capturedExpectedRemaining = math.min(expectedXPRemaining, remainXP)
+  local capturedLastIx = lastIx
   self.bars[currentBarIdx]:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    GameTooltip:AddLine(date("%H:%M", starts[lastIx]) .. " (Current)")
-    GameTooltip:AddLine(string.format("%d XP earned", currentXP), 0.2,0.8,1)
-    GameTooltip:AddLine(string.format("%d XP predicted", math.min(expectedXPRemaining, remainXP)), 1,0.2,0.2)
+    GameTooltip:AddLine(date("%H:%M", starts[capturedLastIx]) .. " (Current)")
+    GameTooltip:AddLine(string.format("%d XP earned", capturedCurrentXP), 0.2,0.8,1)
+    GameTooltip:AddLine(string.format("%d XP predicted", capturedExpectedRemaining), 1,0.2,0.2)
+    GameTooltip:AddLine(string.format("%d XP total", capturedCurrentXP + capturedExpectedRemaining), 1,1,1)
     GameTooltip:Show()
   end)
   self.bars[currentBarIdx]:SetScript("OnLeave", GameTooltip_Hide)
@@ -228,8 +244,9 @@ function Graph:Refresh()
       self.bars[i]:Hide()
       
       self.redBars[i]:Show()
+      self.redBars[i]:SetBackdropColor(0,0,0,0.6)  -- Add black background
       self.redBars[i]:ClearAllPoints()
-      self.redBars[i]:SetPoint("BOTTOMLEFT", self.frame, "BOTTOMLEFT", (i-1)*(UI.PANEL_W/NB), 0)
+      self.redBars[i]:SetPoint("BOTTOMLEFT", self.frame, "BOTTOMLEFT", (i-1)*BAR_W, 0)
       self.redBars[i]:SetMinMaxValues(0, maxVal)
       self.redBars[i]:SetValue(xpThisBucket)
       
@@ -237,10 +254,12 @@ function Graph:Refresh()
       hoursAccountedFor = hoursAccountedFor + (xpThisBucket / sAvg)
       
       -- Tooltip
+      local capturedBucketTime = bucketTime
+      local capturedXPThisBucket = math.floor(xpThisBucket)
       self.redBars[i]:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:AddLine(date("%H:%M", bucketTime))
-        GameTooltip:AddLine(string.format("%d XP predicted", math.floor(xpThisBucket)), 1,0.2,0.2)
+        GameTooltip:AddLine(date("%H:%M", capturedBucketTime))
+        GameTooltip:AddLine(string.format("%d XP predicted", capturedXPThisBucket), 1,0.2,0.2)
         GameTooltip:Show()
       end)
       self.redBars[i]:SetScript("OnLeave", GameTooltip_Hide)
