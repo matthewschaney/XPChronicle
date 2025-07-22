@@ -114,7 +114,10 @@ function Graph:Refresh()
       self.bars[i]:SetValue(xp)
       self.bars[i]:GetStatusBarTexture():SetVertexColor(0.2,0.8,1)
       
+      -- Ensure red bars are completely hidden
       self.redBars[i]:Hide()
+      self.redBars[i]:SetValue(0)
+      self.redBars[i]:ClearAllPoints()
       
       self.texts[i]:SetText(date("%H:%M", starts[idx]))
       
@@ -166,7 +169,10 @@ function Graph:Refresh()
     self.bars[i]:SetValue(xp)
     self.bars[i]:GetStatusBarTexture():SetVertexColor(0.2,0.8,1)
     
+    -- Make sure red bars are completely hidden
     self.redBars[i]:Hide()
+    self.redBars[i]:SetValue(0)
+    self.redBars[i]:ClearAllPoints()
     
     self.texts[i]:SetText(date("%H:%M", starts[histIdx]))
     
@@ -182,7 +188,7 @@ function Graph:Refresh()
   end
 
   ----------------------------------------------------------------
-  -- 2) Current bucket (partial blue, partial red)
+  -- 2) Current bucket (blue only, no red overlay)
   ----------------------------------------------------------------
   local BAR_W = UI.PANEL_W / NB  -- Calculate BAR_W here
   local currentBarIdx = historyBuckets
@@ -199,17 +205,10 @@ function Graph:Refresh()
   self.bars[currentBarIdx]:SetValue(currentXP)
   self.bars[currentBarIdx]:GetStatusBarTexture():SetVertexColor(0.2,0.8,1)
   
-  -- Red part: predicted XP for rest of this hour
-  -- The red bar should show the TOTAL expected for the hour, not just the remaining part
-  self.redBars[currentBarIdx]:Show()
-  self.redBars[currentBarIdx]:SetBackdropColor(0,0,0,0)  -- Transparent background since blue provides it
+  -- Hide the red bar completely for current hour
+  self.redBars[currentBarIdx]:Hide()
+  self.redBars[currentBarIdx]:SetValue(0)
   self.redBars[currentBarIdx]:ClearAllPoints()
-  self.redBars[currentBarIdx]:SetPoint("BOTTOMLEFT", g, "BOTTOMLEFT", (currentBarIdx-1)*BAR_W, 0)
-  self.redBars[currentBarIdx]:SetMinMaxValues(0, maxVal)
-  self.redBars[currentBarIdx]:SetValue(totalExpectedForHour)
-  
-  -- Make sure the red bar renders behind the blue bar
-  self.redBars[currentBarIdx]:SetFrameLevel(self.bars[currentBarIdx]:GetFrameLevel() - 1)
   
   self.texts[currentBarIdx]:SetText(date("%H:%M", starts[lastIx]))
   
@@ -222,7 +221,6 @@ function Graph:Refresh()
     GameTooltip:AddLine(date("%H:%M", starts[capturedLastIx]) .. " (Current)")
     GameTooltip:AddLine(string.format("%d XP earned", capturedCurrentXP), 0.2,0.8,1)
     GameTooltip:AddLine(string.format("%d XP predicted", capturedExpectedRemaining), 1,0.2,0.2)
-    GameTooltip:AddLine(string.format("%d XP total", capturedCurrentXP + capturedExpectedRemaining), 1,1,1)
     GameTooltip:Show()
   end)
   self.bars[currentBarIdx]:SetScript("OnLeave", GameTooltip_Hide)
@@ -268,7 +266,12 @@ function Graph:Refresh()
       self.bars[i]:Show()
       self.bars[i]:SetMinMaxValues(0, maxVal)
       self.bars[i]:SetValue(0)
+      self.bars[i]:GetStatusBarTexture():SetVertexColor(0.2,0.8,1)
+      
+      -- Make sure red bars are fully hidden
       self.redBars[i]:Hide()
+      self.redBars[i]:SetValue(0)
+      self.redBars[i]:ClearAllPoints()
     end
     
     self.texts[i]:SetText(date("%H:%M", bucketTime))
