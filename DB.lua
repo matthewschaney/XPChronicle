@@ -66,6 +66,8 @@ function DB:Init()
 
   -- time‑lock offset (defaults to 0 past the hour)
   AvgXPDB.gridOffset    = AvgXPDB.gridOffset or 0
+  -- prediction mode toggle (added)
+  AvgXPDB.predictionMode = AvgXPDB.predictionMode or false
 
   -- backfill old events
   self:MigrateOldEvents()
