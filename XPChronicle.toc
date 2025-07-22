@@ -1,8 +1,15 @@
 ## Title: XPChronicle
 ## Author: Matthew Schaney
-## Version: 1.0.1
-## Notes: Shows session & lifetime average XP/hr for each character.
-## SavedVariablesPerCharacter: AvgXPDB
+## Version: 1.1.0
+## Notes: Records session & lifetime average XP/hr for each character.
+## SavedVariables: AvgXPDB
 ## Interface: 11507, 50500
 
-XPChronicle.lua
+Utils.lua
+DB.lua
+UI.lua
+Graph.lua
+Commands.lua
+MinimapButton.lua
+History.lua
+Core.lua
