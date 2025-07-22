@@ -76,7 +76,7 @@ function H:Create()
   -- Title
   local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
   title:SetPoint("TOP", 0, -10)
-  title:SetText("XP Chronicle History")
+  title:SetText("XPChronicle History")
 
   -- Mode buttons
   self.modes = {}
