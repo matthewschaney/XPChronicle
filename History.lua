@@ -1,109 +1,119 @@
--- History.lua
--- Scrollable “tome” window with Event/Hour/Day toggle,
--- position persistence, and right-click lock/unlock.
+-- XPChronicle ▸ History.lua
 
-XPChronicle = XPChronicle or {}
-XPChronicle.History = {}
-local H  = XPChronicle.History
-local UI = XPChronicle.UI
+XPChronicle            = XPChronicle or {}
+XPChronicle.History    = {}
+local H                = XPChronicle.History
+local UI               = XPChronicle.UI
+local DB               = XPChronicle.DB
 
--- One‑time setup of the right-click lock menu
-local function InitializeHistoryMenu()
+-- Lock menu ------------------------------------------------------------------
+local function InitLockMenu()
   if H.lockMenu then return end
-  H.lockMenu = CreateFrame("Frame", "XPChronicleHistoryMenu", UIParent, "UIDropDownMenuTemplate")
-  UIDropDownMenu_Initialize(H.lockMenu, function(self, level)
-    local info = UIDropDownMenu_CreateInfo()
-    info.text    = "Lock Frame"
-    info.checked = AvgXPDB.historyLocked
-    info.func   = function()
+
+  H.lockMenu = CreateFrame("Frame", "XPChronicleHistoryMenu",
+                           UIParent, "UIDropDownMenuTemplate")
+
+  UIDropDownMenu_Initialize(H.lockMenu, function(_, level)
+    local info       = UIDropDownMenu_CreateInfo()
+    info.text        = "Lock Frame"
+    info.checked     = AvgXPDB.historyLocked
+    info.func        = function()
       AvgXPDB.historyLocked = not AvgXPDB.historyLocked
       H.frame:SetMovable(not AvgXPDB.historyLocked)
-      if AvgXPDB.historyLocked then H.frame:StopMovingOrSizing() end
+      if AvgXPDB.historyLocked then
+        H.frame:StopMovingOrSizing()
+      end
     end
     UIDropDownMenu_AddButton(info, level)
   end)
 end
 
+-- Frame setup-----------------------------------------------------------------
 function H:Create()
   if self.frame then return end
 
-  -- Frame & backdrop
-  local f = CreateFrame("Frame", "XPChronicleHistoryFrame", UI.back, "BackdropTemplate")
+  -- Frame shell---------------------------------------------------------------
+  local f = CreateFrame("Frame", "XPChronicleHistoryFrame",
+                        UI.back, "BackdropTemplate")
+  self.frame = f
   f:SetSize(300, 400)
   f:SetBackdrop({
     bgFile   = "Interface\\DialogFrame\\UI-DialogBox-Background",
     edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
     tile     = true, tileSize = 32, edgeSize = 16,
-    insets   = { left=5, right=5, top=5, bottom=5 },
+    insets   = { left = 5, right = 5, top = 5, bottom = 5 },
   })
 
-  -- Restore saved position or center
+  -- Positioning --------------------------------------------------------------
   if AvgXPDB.historyPos then
-    f:SetPoint(
-      AvgXPDB.historyPos.point, UIParent,
-      AvgXPDB.historyPos.relativePoint,
-      AvgXPDB.historyPos.x, AvgXPDB.historyPos.y
-    )
+    f:SetPoint(AvgXPDB.historyPos.point, UIParent,
+               AvgXPDB.historyPos.relativePoint,
+               AvgXPDB.historyPos.x, AvgXPDB.historyPos.y)
   else
     f:SetPoint("CENTER")
   end
 
-  -- Mouse, drag & lock
+  -- Drag & lock --------------------------------------------------------------
   f:EnableMouse(true)
   f:RegisterForDrag("LeftButton")
   f:SetMovable(not AvgXPDB.historyLocked)
-  f:SetScript("OnDragStart", function(self, button)
-    if button=="LeftButton" and not AvgXPDB.historyLocked then
+
+  f:SetScript("OnDragStart", function(self, btn)
+    if btn == "LeftButton" and not AvgXPDB.historyLocked then
       self:StartMoving()
     end
   end)
+
   f:SetScript("OnDragStop", function(self)
     if not AvgXPDB.historyLocked then
       self:StopMovingOrSizing()
       local p, _, rp, x, y = self:GetPoint()
-      AvgXPDB.historyPos = { point=p, relativePoint=rp, x=x, y=y }
+      AvgXPDB.historyPos = { point = p, relativePoint = rp, x = x, y = y }
     end
   end)
 
-  -- Right-click menu to lock/unlock
-  InitializeHistoryMenu()
-  f:SetScript("OnMouseUp", function(self, button)
-    if button == "RightButton" then
+  -- Lock menu ----------------------------------------------------------------
+  InitLockMenu()
+  f:SetScript("OnMouseUp", function(_, btn)
+    if btn == "RightButton" then
       ToggleDropDownMenu(1, nil, H.lockMenu, "cursor")
     end
   end)
 
-  -- Title
+  -- Title --------------------------------------------------------------------
   local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
   title:SetPoint("TOP", 0, -10)
   title:SetText("XPChronicle History")
 
-  -- Mode buttons
+  -- Mode buttons -------------------------------------------------------------
   self.modes = {}
-  for i,modeTitle in ipairs({ "Event", "Hour", "Day" }) do
-    local m = modeTitle:lower()
-    local btn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    btn:SetSize(60, 20)
-    btn:SetPoint("TOPLEFT", f, "TOPLEFT", 20 + (i-1)*70, -30)
-    btn:SetText(modeTitle)
-    btn:SetScript("OnClick", function()
-      AvgXPDB.historyMode = m
+  for i, name in ipairs({ "Event", "Hour", "Day" }) do
+    local key = name:lower()
+    local b   = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    b:SetSize(60, 20)
+    b:SetPoint("TOPLEFT", 20 + (i - 1) * 70, -30)
+    b:SetText(name)
+    b:SetScript("OnClick", function()
+      AvgXPDB.historyMode = key
       H:Update()
     end)
-    self.modes[m] = btn
+    self.modes[key] = b
   end
 
-  -- ScrollFrame + content fontstring
-  local scroll = CreateFrame("ScrollFrame", "XPChronicleHistoryScrollFrame", f, "UIPanelScrollFrameTemplate")
-  scroll:SetPoint("TOPLEFT",     f, "TOPLEFT",     20, -60)
-  scroll:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -40, 20)
+  -- Scroll area --------------------------------------------------------------
+  local scroll = CreateFrame("ScrollFrame",
+                  "XPChronicleHistoryScrollFrame", f,
+                  "UIPanelScrollFrameTemplate")
+  scroll:SetPoint("TOPLEFT", 20, -60)
+  scroll:SetPoint("BOTTOMRIGHT", -40, 20)
 
-  local content = CreateFrame("Frame", "XPChronicleHistoryContent", scroll)
-  content:SetSize(1,1)
+  local content = CreateFrame("Frame", nil, scroll)
+  content:SetSize(1, 1)
   scroll:SetScrollChild(content)
   self.content = content
 
-  local fs = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  local fs = content:CreateFontString(nil, "OVERLAY",
+                                      "GameFontHighlightSmall")
   fs:SetPoint("TOPLEFT", 0, 0)
   fs:SetJustifyH("LEFT")
   fs:SetJustifyV("TOP")
@@ -112,9 +122,9 @@ function H:Create()
   self.textFS = fs
 
   f:Hide()
-  self.frame = f
 end
 
+-- Public API -----------------------------------------------------------------
 function H:Toggle()
   if not self.frame then self:Create() end
   if self.frame:IsShown() then
@@ -128,27 +138,29 @@ end
 function H:Update()
   if not self.frame then return end
 
-  -- Highlight the active mode button
+  -- Highlight active button --------------------------------------------------
   local mode = AvgXPDB.historyMode or "hour"
-  for m,btn in pairs(self.modes) do
+  for m, btn in pairs(self.modes) do
     btn:SetEnabled(m ~= mode)
   end
 
-  -- Build the lines of text
+  -- Build text lines ---------------------------------------------------------
   local lines = {}
+
   if mode == "event" then
-    local days = {}
-    for _,ev in ipairs(AvgXPDB.historyEvents or {}) do
-      days[ev.day] = days[ev.day] or {}
-      table.insert(days[ev.day], ev)
+    local byDay = {}
+    for _, ev in ipairs(AvgXPDB.historyEvents or {}) do
+      byDay[ev.day] = byDay[ev.day] or {}
+      table.insert(byDay[ev.day], ev)
     end
-    local dayKeys = {}
-    for d in pairs(days) do table.insert(dayKeys, d) end
-    table.sort(dayKeys, function(a,b) return a > b end)
-    for _,day in ipairs(dayKeys) do
+    local keys = {}
+    for d in pairs(byDay) do table.insert(keys, d) end
+    table.sort(keys, function(a, b) return a > b end)
+
+    for _, day in ipairs(keys) do
       table.insert(lines, day)
-      table.sort(days[day], function(a,b) return a.time < b.time end)
-      for _,ev in ipairs(days[day]) do
+      table.sort(byDay[day], function(a, b) return a.time < b.time end)
+      for _, ev in ipairs(byDay[day]) do
         table.insert(lines, ("  [%s] +%d XP"):format(ev.time, ev.xp))
       end
       table.insert(lines, "")
@@ -156,36 +168,35 @@ function H:Update()
 
   elseif mode == "hour" then
     local hist = AvgXPDB.history or {}
-    local dayKeys = {}
-    for d in pairs(hist) do table.insert(dayKeys, d) end
-    table.sort(dayKeys, function(a,b) return a > b end)
-    for _,day in ipairs(dayKeys) do
+    local days = {}
+    for d in pairs(hist) do table.insert(days, d) end
+    table.sort(days, function(a, b) return a > b end)
+
+    for _, day in ipairs(days) do
       table.insert(lines, day)
-      local hours = {}
-      for hr in pairs(hist[day]) do table.insert(hours, hr) end
-      table.sort(hours)
-      for _,hr in ipairs(hours) do
+      local hrs = {}
+      for hr in pairs(hist[day]) do table.insert(hrs, hr) end
+      table.sort(hrs)
+      for _, hr in ipairs(hrs) do
         table.insert(lines, ("  [%s] +%d XP"):format(hr, hist[day][hr]))
       end
       table.insert(lines, "")
     end
 
-  elseif mode == "day" then
+  else -- "day"
     local totals = {}
-    for _,ev in ipairs(AvgXPDB.historyEvents or {}) do
+    for _, ev in ipairs(AvgXPDB.historyEvents or {}) do
       totals[ev.day] = (totals[ev.day] or 0) + ev.xp
     end
-    local dayKeys = {}
-    for d in pairs(totals) do table.insert(dayKeys, d) end
-    table.sort(dayKeys, function(a,b) return a > b end)
-    for _,day in ipairs(dayKeys) do
+    local days = {}
+    for d in pairs(totals) do table.insert(days, d) end
+    table.sort(days, function(a, b) return a > b end)
+    for _, day in ipairs(days) do
       table.insert(lines, ("%s: +%d XP"):format(day, totals[day]))
     end
   end
 
-  -- Update the fontstring and scroll height
-  local text = table.concat(lines, "\n")
-  self.textFS:SetText(text)
-  local height = #lines * 14  -- approx 14px per line
-  self.content:SetHeight(height)
+  -- Push to fontstring -------------------------------------------------------
+  self.textFS:SetText(table.concat(lines, "\n"))
+  self.content:SetHeight(#lines * 14) -- Rough line height.
 end

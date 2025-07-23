@@ -1,6 +1,4 @@
 # XPChronicle
-![In‑game XP window](https://raw.githubusercontent.com/matthewschaney/XPChronicle/main/xpchronicle-logo.png)
-
 [![Version](https://img.shields.io/github/v/release/matthewschaney/XPChronicle?label=latest&style=flat-square)](https://github.com/matthewschaney/XPChronicle/releases)
 [![Source on GitHub](https://img.shields.io/badge/source-github-black?logo=github&style=flat-square)](https://github.com/matthewschaney/XPChronicle)
 
@@ -89,8 +87,6 @@ Found a bug or have a feature request? Open an issue on the **[GitHub repository
 
 ## License
 
-Starting with **v1.0.0** (July 20 2025) this project is licensed under the  
-**GNU General Public License v3.0 or later (GPL‑3.0‑or‑later)** – see the `LICENSE` file for full terms.
-
-> **Note:** A private pre‑release commit briefly referenced the MIT License, but it was never downloaded or distributed. No public build was ever published under MIT, so the GPL‑3.0‑or‑later licence applies to *all* public versions.
-
+This project is licensed under the  
+**GNU General Public License v3.0 or later (GPL‑3.0‑or‑later)**.  
+See the [LICENSE](https://github.com/matthewschaney/xpchronicle/blob/main/LICENSE.md) file for full terms.
