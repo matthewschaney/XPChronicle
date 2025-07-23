@@ -15,7 +15,7 @@ local RED             = { 1,  .2, .2 }         -- Fill colour for prediction.
 local BK              = { 0,  0,  0,  .6 }     -- 60 % black for backing.
 local TEX             = "Interface\\Buttons\\WHITE8x8"
 
---------------------------------------------------------------------- Helpers
+-------------------------------------------------------------------- Helpers
 local function createStatusBar(parent, w, h, col)
   local bar = CreateFrame("StatusBar", nil, parent, "BackdropTemplate")
   bar:SetSize(w, h)
@@ -40,7 +40,7 @@ local function attachTooltip(frame, label, value, isPred)
   frame:SetScript("OnLeave", GameTooltip_Hide)
 end
 
--------------------------------------------------------------------- :Init()
+----------------------------------------------------------------------- Init
 function Graph:Init()
   local g = _G.XPChronicleGraph
          or CreateFrame("Button", "XPChronicleGraph", UI.back)
@@ -49,26 +49,15 @@ function Graph:Init()
   g:SetPoint("TOP", UI.back, "BOTTOM", 0, -8)
   g:SetSize(UI.PANEL_W, BAR_H)
 
-  -- Backing texture: full‑width semi‑transparent black.
+  -- Full‑width semi‑transparent backdrop.
   if not self.backdrop then
     self.backdrop = g:CreateTexture(nil, "BACKGROUND")
     self.backdrop:SetColorTexture(unpack(BK))
     self.backdrop:SetAllPoints(g)
   end
-
-  -- Right‑click toggles Prediction Mode.
-  g:EnableMouse(true)
-  g:RegisterForClicks("RightButtonUp")
-  g:SetScript("OnClick", function(_, btn)
-    if btn == "RightButton" then
-      AvgXPDB.predictionMode = not AvgXPDB.predictionMode
-      self:BuildBars()
-      self:Refresh()
-    end
-  end)
 end
 
------------------------------------------------------------------ :BuildBars()
+-------------------------------------------------------------------- BuildBars
 function Graph:BuildBars()
   self:Init()
 
@@ -92,13 +81,12 @@ function Graph:BuildBars()
     for _, w in ipairs(t) do w:Hide() end
   end
 
-  -- Create bars if needed, and reposition all bars.
+  -- Create bars if needed and reposition all bars.
   for i = 1, NB do
     if not self.bars[i] then
       self.bars[i]    = createStatusBar(g, BAR_W, BAR_H, BLUE)
       self.redBars[i] = createStatusBar(g, BAR_W, BAR_H, RED)
-      self.texts[i]   = g:CreateFontString(nil,
-                                           "OVERLAY",
+      self.texts[i]   = g:CreateFontString(nil, "OVERLAY",
                                            "GameFontNormalSmall")
       self.texts[i]:SetPoint("TOP", self.bars[i], "BOTTOM", 0, -2)
     else
@@ -114,7 +102,7 @@ function Graph:BuildBars()
   self:Refresh()
 end
 
-------------------------------------------------------------------- :Refresh()
+----------------------------------------------------------------------- Refresh
 function Graph:Refresh()
   local buckets, starts, lastIx = DB:GetHourlyBuckets()
   local NB      = AvgXPDB.buckets
@@ -158,7 +146,7 @@ function Graph:Refresh()
   -- History (blue, independent scale).
   local maxLeft = (maxHist > 0) and maxHist or 1
   for i = 1, histBuckets do
-    local offset = histBuckets - i              -- 0 → current hour.
+    local offset = histBuckets - i
     local idx    = ((lastIx - offset - 1) % NB) + 1
     local xp     = buckets[idx] or 0
     local bar    = self.bars[i]
