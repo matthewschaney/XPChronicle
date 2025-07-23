@@ -1,3 +1,5 @@
+-- XPChronicle ▸ Core.lua
+
 local ADDON_NAME = ...
 XPChronicle = XPChronicle or {}
 

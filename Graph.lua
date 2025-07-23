@@ -15,7 +15,7 @@ local RED             = { 1,  .2, .2 }         -- Fill colour for prediction.
 local BK              = { 0,  0,  0,  .6 }     -- 60 % black for backing.
 local TEX             = "Interface\\Buttons\\WHITE8x8"
 
--------------------------------------------------------------------- Helpers
+----------------------------------------------------------- Helpers
 local function createStatusBar(parent, w, h, col)
   local bar = CreateFrame("StatusBar", nil, parent, "BackdropTemplate")
   bar:SetSize(w, h)
@@ -40,7 +40,7 @@ local function attachTooltip(frame, label, value, isPred)
   frame:SetScript("OnLeave", GameTooltip_Hide)
 end
 
------------------------------------------------------------------------ Init
+----------------------------------------------------------- Init
 function Graph:Init()
   local g = _G.XPChronicleGraph
          or CreateFrame("Button", "XPChronicleGraph", UI.back)
@@ -57,7 +57,7 @@ function Graph:Init()
   end
 end
 
--------------------------------------------------------------------- BuildBars
+----------------------------------------------------------- BuildBars
 function Graph:BuildBars()
   self:Init()
 
@@ -102,7 +102,7 @@ function Graph:BuildBars()
   self:Refresh()
 end
 
------------------------------------------------------------------------ Refresh
+----------------------------------------------------------- Refresh
 function Graph:Refresh()
   local buckets, starts, lastIx = DB:GetHourlyBuckets()
   local NB      = AvgXPDB.buckets
@@ -114,7 +114,7 @@ function Graph:Refresh()
     return self:BuildBars()
   end
 
-  ---------------------------------------------------------------- Normal Mode
+  --------------------------------------------------------- Normal Mode
   if not AvgXPDB.predictionMode then
     for i = 1, NB do
       local idx  = Utils.bucketIndexForBar(i, NB, lastIx)

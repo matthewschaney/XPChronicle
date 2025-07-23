@@ -1,3 +1,5 @@
+-- XPChronicle ▸ Commands.lua
+
 XPChronicle = XPChronicle or {}
 XPChronicle.Commands = {}
 local CMD   = XPChronicle.Commands
