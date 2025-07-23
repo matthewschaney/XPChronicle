@@ -1,6 +1,4 @@
 # XPChronicle
-![In‑game XP window](https://raw.githubusercontent.com/matthewschaney/XPChronicle/main/xpchronicle-logo.png)
-
 [![Version](https://img.shields.io/github/v/release/matthewschaney/XPChronicle?label=latest&style=flat-square)](https://github.com/matthewschaney/XPChronicle/releases)
 [![Source on GitHub](https://img.shields.io/badge/source-github-black?logo=github&style=flat-square)](https://github.com/matthewschaney/XPChronicle)
 
