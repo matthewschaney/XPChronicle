@@ -43,11 +43,11 @@ end
 ----------------------------------------------------------- Init
 function Graph:Init()
   local g = _G.XPChronicleGraph
-         or CreateFrame("Button", "XPChronicleGraph", UI.back)
+         or CreateFrame("Frame", "XPChronicleGraph", UI.back)
   self.frame = g
 
   g:SetPoint("TOP", UI.back, "BOTTOM", 0, -8)
-  g:SetSize(UI.PANEL_W, BAR_H)
+  g:SetHeight(BAR_H)
 
   -- Full‑width semi‑transparent backdrop.
   if not self.backdrop then
@@ -61,8 +61,17 @@ end
 function Graph:BuildBars()
   self:Init()
 
-  local g, NB  = self.frame, AvgXPDB.buckets
-  local BAR_W  = math.floor((UI.PANEL_W - (NB - 1) * GAP) / NB)
+  local NB      = AvgXPDB.buckets
+  local BAR_W   = math.floor((UI.PANEL_W - (NB - 1) * GAP) / NB)
+  local TOT_W   = BAR_W * NB + GAP * (NB - 1) -- Exact width of all bars.
+
+  -- Resize the main panel and backdrop so no extra black stripe appears.
+  self.frame:SetWidth(TOT_W)
+  self.backdrop:SetAllPoints(self.frame)
+  if UI.back then
+    UI.back:SetWidth(TOT_W)
+    if UI.back.label then UI.back.label:SetWidth(TOT_W) end
+  end
 
   -- Recycle or create tables.
   self.bars     = self.bars     or {}
@@ -77,28 +86,28 @@ function Graph:BuildBars()
   end
 
   -- Hide any remaining widgets.
-  for _, t in ipairs { self.bars, self.redBars, self.texts } do
-    for _, w in ipairs(t) do w:Hide() end
+  for _, tbl in ipairs { self.bars, self.redBars, self.texts } do
+    for _, w in ipairs(tbl) do w:Hide() end
   end
 
   -- Create bars if needed and reposition all bars.
   for i = 1, NB do
     if not self.bars[i] then
-      self.bars[i]    = createStatusBar(g, BAR_W, BAR_H, BLUE)
-      self.redBars[i] = createStatusBar(g, BAR_W, BAR_H, RED)
-      self.texts[i]   = g:CreateFontString(nil, "OVERLAY",
-                                           "GameFontNormalSmall")
+      self.bars[i]    = createStatusBar(self.frame, BAR_W, BAR_H, BLUE)
+      self.redBars[i] = createStatusBar(self.frame, BAR_W, BAR_H, RED)
+      self.texts[i]   = self.frame:CreateFontString(nil, "OVERLAY",
+                                                    "GameFontNormalSmall")
       self.texts[i]:SetPoint("TOP", self.bars[i], "BOTTOM", 0, -2)
     else
       self.bars[i]:SetSize(BAR_W, BAR_H)
       self.redBars[i]:SetSize(BAR_W, BAR_H)
     end
     local x = (i - 1) * (BAR_W + GAP)
-    self.bars[i]:SetPoint("BOTTOMLEFT", g, "BOTTOMLEFT", x, 0)
-    self.redBars[i]:SetPoint("BOTTOMLEFT", g, "BOTTOMLEFT", x, 0)
+    self.bars[i]:SetPoint("BOTTOMLEFT", self.frame, "BOTTOMLEFT", x, 0)
+    self.redBars[i]:SetPoint("BOTTOMLEFT", self.frame, "BOTTOMLEFT", x, 0)
   end
 
-  self.barWCache = BAR_W        -- Cached for label logic in Refresh.
+  self.barWCache = BAR_W
   self:Refresh()
 end
 
