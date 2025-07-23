@@ -1,279 +1,207 @@
--- Graph.lua (Fixed version)
--- Bar‑graph construction, refresh, and right‑click toggle Prediction Mode
--- (fixed bucket count; composite current‑hour; projected red bars)
+-- XPChronicle ▸ Graph.lua
 
-XPChronicle = XPChronicle or {}
-XPChronicle.Graph = {}
-local Graph = XPChronicle.Graph
-local UI    = XPChronicle.UI
-local DB    = XPChronicle.DB
-local Utils = XPChronicle.Utils
+XPChronicle           = XPChronicle or {}
+XPChronicle.Graph     = {}
+local Graph           = XPChronicle.Graph
 
-local BAR_H = 40
+-- Short locals.
+local UI, DB, Utils   = XPChronicle.UI, XPChronicle.DB, XPChronicle.Utils
 
+-- Constants.
+local BAR_H           = 40                     -- Height of every bar.
+local GAP             = 1                      -- One‑pixel gap between bars.
+local BLUE            = { .2, .8, 1 }          -- Fill colour for history.
+local RED             = { 1,  .2, .2 }         -- Fill colour for prediction.
+local BK              = { 0,  0,  0,  .6 }     -- 60 % black for backing.
+local TEX             = "Interface\\Buttons\\WHITE8x8"
+
+-- Helpers --------------------------------------------------------------------
+local function createStatusBar(parent, w, h, col)
+  local bar = CreateFrame("StatusBar", nil, parent, "BackdropTemplate")
+  bar:SetSize(w, h)
+  bar:SetOrientation("VERTICAL")
+  bar:SetStatusBarTexture(TEX)
+  bar:GetStatusBarTexture():SetVertexColor(col[1], col[2], col[3])
+  bar:SetBackdrop({ bgFile = TEX })            -- Needed for tooltip hitbox.
+  bar:SetBackdropColor(0, 0, 0, 0)             -- Transparent backdrop.
+  return bar
+end
+
+local function attachTooltip(frame, label, value, isPred)
+  frame:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:AddLine(label)
+    GameTooltip:AddLine(value,
+                        isPred and 1 or .2,
+                        isPred and .2 or .8,
+                        isPred and .2 or 1)
+    GameTooltip:Show()
+  end)
+  frame:SetScript("OnLeave", GameTooltip_Hide)
+end
+
+-- Init -----------------------------------------------------------------------
 function Graph:Init()
   local g = _G.XPChronicleGraph
-         or CreateFrame("Button", "XPChronicleGraph", UI.back)
+         or CreateFrame("Frame", "XPChronicleGraph", UI.back)
   self.frame = g
 
   g:SetPoint("TOP", UI.back, "BOTTOM", 0, -8)
-  g:SetSize(UI.PANEL_W, BAR_H)
+  g:SetHeight(BAR_H)
 
-  -- right‑click toggles Prediction Mode
-  g:EnableMouse(true)
-  g:RegisterForClicks("RightButtonUp")
-  g:SetScript("OnClick", function(_, button)
-    if button == "RightButton" then
-      AvgXPDB.predictionMode = not AvgXPDB.predictionMode
-      self:BuildBars()
-      self:Refresh()
-    end
-  end)
+  -- Full‑width semi‑transparent backdrop.
+  if not self.backdrop then
+    self.backdrop = g:CreateTexture(nil, "BACKGROUND")
+    self.backdrop:SetColorTexture(unpack(BK))
+    self.backdrop:SetAllPoints(g)
+  end
 end
 
+-- BuildBars ------------------------------------------------------------------
 function Graph:BuildBars()
   self:Init()
-  local g = self.frame
-  local NB = AvgXPDB.buckets
-  local BAR_W = UI.PANEL_W / NB
 
-  -- clear out old bars/texts/overlays
-  if self.bars then     for _,b in ipairs(self.bars)     do b:Hide() end end
-  if self.texts then    for _,t in ipairs(self.texts)    do t:Hide() end end
-  if self.redBars then  for _,r in ipairs(self.redBars)  do r:Hide() end end
-  self.bars, self.texts, self.redBars = {}, {}, {}
+  local NB      = AvgXPDB.buckets
+  local BAR_W   = math.floor((UI.PANEL_W - (NB - 1) * GAP) / NB)
+  local TOT_W   = BAR_W * NB + GAP * (NB - 1) -- Exact width of all bars.
 
-  -- Create all bars - we'll configure them in Refresh
-  for i = 1, NB do
-    -- Blue bar (for history or partial current)
-    local bar = CreateFrame("StatusBar", nil, g, "BackdropTemplate")
-    bar:SetSize(BAR_W, BAR_H)
-    bar:SetOrientation("VERTICAL")
-    bar:SetStatusBarTexture("Interface\\Buttons\\WHITE8x8")
-    bar:GetStatusBarTexture():SetVertexColor(0.2,0.8,1)
-    bar:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8" })
-    bar:SetBackdropColor(0,0,0,0.6)
-    bar:SetPoint("BOTTOMLEFT", g, "BOTTOMLEFT", (i-1)*BAR_W, 0)
-
-    -- Red bar (for predictions)
-    local redBar = CreateFrame("StatusBar", nil, g, "BackdropTemplate")
-    redBar:SetSize(BAR_W, BAR_H)
-    redBar:SetOrientation("VERTICAL")
-    redBar:SetStatusBarTexture("Interface\\Buttons\\WHITE8x8")
-    redBar:GetStatusBarTexture():SetVertexColor(1,0.2,0.2)
-    redBar:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8" })
-    redBar:SetBackdropColor(0,0,0,0)
-    redBar:SetPoint("BOTTOMLEFT", g, "BOTTOMLEFT", (i-1)*BAR_W, 0)
-
-    -- Text label
-    local txt = g:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    txt:SetPoint("TOP", bar, "BOTTOM", 0, -2)
-
-    self.bars[i] = bar
-    self.redBars[i] = redBar
-    self.texts[i] = txt
+  -- Resize the main panel and backdrop so no extra black stripe appears.
+  self.frame:SetWidth(TOT_W)
+  self.backdrop:SetAllPoints(self.frame)
+  if UI.back then
+    UI.back:SetWidth(TOT_W)
+    if UI.back.label then UI.back.label:SetWidth(TOT_W) end
   end
 
+  -- Recycle or create tables.
+  self.bars     = self.bars     or {}
+  self.redBars  = self.redBars  or {}
+  self.texts    = self.texts    or {}
+
+  -- Trim tables if the bucket count was reduced.
+  for i = #self.bars, NB + 1, -1 do
+    self.bars[i]:Hide();    self.bars[i]    = nil
+    self.redBars[i]:Hide(); self.redBars[i] = nil
+    self.texts[i]:Hide();   self.texts[i]   = nil
+  end
+
+  -- Hide any remaining widgets.
+  for _, tbl in ipairs { self.bars, self.redBars, self.texts } do
+    for _, w in ipairs(tbl) do w:Hide() end
+  end
+
+  -- Create bars if needed and reposition all bars.
+  for i = 1, NB do
+    if not self.bars[i] then
+      self.bars[i]    = createStatusBar(self.frame, BAR_W, BAR_H, BLUE)
+      self.redBars[i] = createStatusBar(self.frame, BAR_W, BAR_H, RED)
+      self.texts[i]   = self.frame:CreateFontString(nil, "OVERLAY",
+                                                    "GameFontNormalSmall")
+      self.texts[i]:SetPoint("TOP", self.bars[i], "BOTTOM", 0, -2)
+    else
+      self.bars[i]:SetSize(BAR_W, BAR_H)
+      self.redBars[i]:SetSize(BAR_W, BAR_H)
+    end
+    local x = (i - 1) * (BAR_W + GAP)
+    self.bars[i]:SetPoint("BOTTOMLEFT", self.frame, "BOTTOMLEFT", x, 0)
+    self.redBars[i]:SetPoint("BOTTOMLEFT", self.frame, "BOTTOMLEFT", x, 0)
+  end
+
+  self.barWCache = BAR_W
   self:Refresh()
 end
 
+-- Refresh --------------------------------------------------------------------
 function Graph:Refresh()
   local buckets, starts, lastIx = DB:GetHourlyBuckets()
-  local NB = AvgXPDB.buckets
-  local BAR_W = UI.PANEL_W / NB  -- Define BAR_W at the top so it's available throughout
+  local NB      = AvgXPDB.buckets
+  local maxHist = DB:GetMaxBucket()
 
-  -- Store last known bucket index to detect rotation
-  if not self.lastKnownBucketIx then
-    self.lastKnownBucketIx = lastIx
+  -- Rebuild if buckets rotated or count changed.
+  if not self.lastIx or self.lastIx ~= lastIx or #self.bars ~= NB then
+    self.lastIx = lastIx
+    return self:BuildBars()
   end
 
-  -- Rebuild if needed (bucket count changed or bucket rotated)
-  if not self.bars or #self.bars ~= NB or self.lastKnownBucketIx ~= lastIx then
-    self.lastKnownBucketIx = lastIx
-    self:BuildBars()
-    return
-  end
-
-  -- Clear all tooltips
-  for i = 1, NB do
-    self.bars[i]:SetScript("OnEnter", nil)
-    self.bars[i]:SetScript("OnLeave", nil)
-    self.redBars[i]:SetScript("OnEnter", nil)
-    self.redBars[i]:SetScript("OnLeave", nil)
-  end
-
+  -- History Mode -------------------------------------------------------------
   if not AvgXPDB.predictionMode then
-    -- Normal mode - just show history
-    local maxVal = DB:GetMaxBucket()
     for i = 1, NB do
-      local idx = Utils.bucketIndexForBar(i, NB, lastIx)
-      local xp = buckets[idx] or 0
-      
-      self.bars[i]:Show()
-      self.bars[i]:SetMinMaxValues(0, maxVal)
-      self.bars[i]:SetValue(xp)
-      self.bars[i]:GetStatusBarTexture():SetVertexColor(0.2,0.8,1)
-      
-      -- Ensure red bars are completely hidden
+      local idx  = Utils.bucketIndexForBar(i, NB, lastIx)
+      local xp   = buckets[idx] or 0
+      local bar  = self.bars[i]
+
+      bar:Show()
+      bar:SetMinMaxValues(0, maxHist)
+      bar:SetValue(xp)
+      bar:GetStatusBarTexture():SetVertexColor(unpack(BLUE))
       self.redBars[i]:Hide()
-      self.redBars[i]:SetValue(0)
-      self.redBars[i]:ClearAllPoints()
-      
-      self.texts[i]:SetText(date("%H:%M", starts[idx]))
-      
-      -- Tooltip
-      self.bars[i]:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:AddLine(date("%H:%M", starts[idx]))
-        GameTooltip:AddLine(string.format("%d XP", xp), 1,1,1)
-        GameTooltip:Show()
-      end)
-      self.bars[i]:SetScript("OnLeave", GameTooltip_Hide)
+
+      local showLbl = self.barWCache >= 14
+      self.texts[i]:SetText(showLbl and date("%H:%M", starts[idx]) or "")
+      attachTooltip(bar, date("%H:%M", starts[idx]),
+                    string.format("%d XP", xp))
     end
     return
   end
 
-  ----------------------------------------------------------------
-  -- Prediction Mode - Split view with present in center
-  ----------------------------------------------------------------
-  local sAvg = DB:GetSessionRate()
-  local curXP = UnitXP("player")
-  local maxXP = UnitXPMax("player")
-  local remainXP = maxXP - curXP
-  local hoursToLevel = (sAvg > 0) and (remainXP / sAvg) or 999
+  -- Prediction Mode ----------------------------------------------------------
+  local sAvg         = DB:GetSessionRate()
+  local curXP        = UnitXP("player")
+  local remainXP     = UnitXPMax("player") - curXP
 
-  -- Calculate how many buckets for history vs future
-  local historyBuckets = math.floor(NB / 2)
-  local futureBuckets = NB - historyBuckets
-  
-  -- Find max value for scaling
-  local maxVal = math.max(DB:GetMaxBucket(), sAvg)
+  local histBuckets   = math.floor(NB / 2)      -- Left half.
+  local futureBuckets = NB - histBuckets        -- Right half.
 
-  -- Current time info
-  local now = time()
-  local currentBucketStart = starts[lastIx]
-  local timeIntoCurrentBucket = now - currentBucketStart
-  local fractionOfCurrentBucket = timeIntoCurrentBucket / 3600
+  -- History (blue, independent scale).
+  local maxLeft = (maxHist > 0) and maxHist or 1
+  for i = 1, histBuckets do
+    local offset = histBuckets - i
+    local idx    = ((lastIx - offset - 1) % NB) + 1
+    local xp     = buckets[idx] or 0
+    local bar    = self.bars[i]
 
-  ----------------------------------------------------------------
-  -- 1) Historical buckets (left side)
-  ----------------------------------------------------------------
-  for i = 1, historyBuckets - 1 do
-    -- Calculate which bucket from history to show
-    local offset = historyBuckets - i
-    local histIdx = ((lastIx - offset - 1) % NB) + 1
-    local xp = buckets[histIdx] or 0
-    
-    self.bars[i]:Show()
-    self.bars[i]:SetMinMaxValues(0, maxVal)
-    self.bars[i]:SetValue(xp)
-    self.bars[i]:GetStatusBarTexture():SetVertexColor(0.2,0.8,1)
-    
-    -- Make sure red bars are completely hidden
+    bar:Show()
+    bar:SetMinMaxValues(0, maxLeft)
+    bar:SetValue(xp)
+    bar:GetStatusBarTexture():SetVertexColor(unpack(BLUE))
     self.redBars[i]:Hide()
-    self.redBars[i]:SetValue(0)
-    self.redBars[i]:ClearAllPoints()
-    
-    self.texts[i]:SetText(date("%H:%M", starts[histIdx]))
-    
-    -- Tooltip
-    local capturedIdx = histIdx  -- Capture for closure
-    self.bars[i]:SetScript("OnEnter", function(self)
-      GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-      GameTooltip:AddLine(date("%H:%M", starts[capturedIdx]))
-      GameTooltip:AddLine(string.format("%d XP", xp), 1,1,1)
-      GameTooltip:Show()
-    end)
-    self.bars[i]:SetScript("OnLeave", GameTooltip_Hide)
+
+    local showLbl = self.barWCache >= 14
+    self.texts[i]:SetText(showLbl and date("%H:%M", starts[idx]) or "")
+    attachTooltip(bar, date("%H:%M", starts[idx]),
+                  string.format("%d XP", xp))
   end
 
-  ----------------------------------------------------------------
-  -- 2) Current bucket (blue only, no red overlay)
-  ----------------------------------------------------------------
-  local BAR_W = UI.PANEL_W / NB  -- Calculate BAR_W here
-  local currentBarIdx = historyBuckets
-  local currentXP = buckets[lastIx] or 0
-  
-  -- For the current bucket, calculate expected total XP for the full hour
-  local remainingTimeInBucket = 1 - fractionOfCurrentBucket
-  local expectedXPRemaining = sAvg * remainingTimeInBucket
-  local totalExpectedForHour = currentXP + math.min(expectedXPRemaining, remainXP)
-  
-  -- Blue part: actual XP earned
-  self.bars[currentBarIdx]:Show()
-  self.bars[currentBarIdx]:SetMinMaxValues(0, maxVal)
-  self.bars[currentBarIdx]:SetValue(currentXP)
-  self.bars[currentBarIdx]:GetStatusBarTexture():SetVertexColor(0.2,0.8,1)
-  
-  -- Hide the red bar completely for current hour
-  self.redBars[currentBarIdx]:Hide()
-  self.redBars[currentBarIdx]:SetValue(0)
-  self.redBars[currentBarIdx]:ClearAllPoints()
-  
-  self.texts[currentBarIdx]:SetText(date("%H:%M", starts[lastIx]))
-  
-  -- Tooltip for current bucket
-  local capturedCurrentXP = currentXP
-  local capturedExpectedRemaining = math.min(expectedXPRemaining, remainXP)
-  local capturedLastIx = lastIx
-  self.bars[currentBarIdx]:SetScript("OnEnter", function(self)
-    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    GameTooltip:AddLine(date("%H:%M", starts[capturedLastIx]) .. " (Current)")
-    GameTooltip:AddLine(string.format("%d XP earned", capturedCurrentXP), 0.2,0.8,1)
-    GameTooltip:AddLine(string.format("%d XP predicted", capturedExpectedRemaining), 1,0.2,0.2)
-    GameTooltip:Show()
-  end)
-  self.bars[currentBarIdx]:SetScript("OnLeave", GameTooltip_Hide)
+  -- Future (red, independent scale, backdrop always visible).
+  local maxRight = (sAvg > 0) and sAvg or 1
+  local xpLeft   = remainXP
+  for j = 1, futureBuckets do
+    local i   = histBuckets + j
+    local r   = self.redBars[i]
+    local bar = self.bars[i]
+    bar:Hide()
 
-  ----------------------------------------------------------------
-  -- 3) Future buckets (right side - all red)
-  ----------------------------------------------------------------
-  local xpAccountedFor = math.min(expectedXPRemaining, remainXP)
-  local hoursAccountedFor = remainingTimeInBucket
-  
-  for i = currentBarIdx + 1, NB do
-    local futureHour = i - currentBarIdx
-    local bucketTime = starts[lastIx] + (futureHour * 3600)
-    
-    if xpAccountedFor < remainXP then
-      -- Still have XP to distribute
-      local xpThisBucket = math.min(sAvg, remainXP - xpAccountedFor)
-      
-      self.bars[i]:Hide()
-      
-      self.redBars[i]:Show()
-      self.redBars[i]:SetBackdropColor(0,0,0,0.6)  -- Add black background
-      self.redBars[i]:ClearAllPoints()
-      self.redBars[i]:SetPoint("BOTTOMLEFT", self.frame, "BOTTOMLEFT", (i-1)*BAR_W, 0)
-      self.redBars[i]:SetMinMaxValues(0, maxVal)
-      self.redBars[i]:SetValue(xpThisBucket)
-      
-      xpAccountedFor = xpAccountedFor + xpThisBucket
-      hoursAccountedFor = hoursAccountedFor + (xpThisBucket / sAvg)
-      
-      -- Tooltip
-      local capturedBucketTime = bucketTime
-      local capturedXPThisBucket = math.floor(xpThisBucket)
-      self.redBars[i]:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:AddLine(date("%H:%M", capturedBucketTime))
-        GameTooltip:AddLine(string.format("%d XP predicted", capturedXPThisBucket), 1,0.2,0.2)
-        GameTooltip:Show()
-      end)
-      self.redBars[i]:SetScript("OnLeave", GameTooltip_Hide)
-    else
-      -- We've distributed all XP, rest are empty
-      self.bars[i]:Show()
-      self.bars[i]:SetMinMaxValues(0, maxVal)
-      self.bars[i]:SetValue(0)
-      self.bars[i]:GetStatusBarTexture():SetVertexColor(0.2,0.8,1)
-      
-      -- Make sure red bars are fully hidden
-      self.redBars[i]:Hide()
-      self.redBars[i]:SetValue(0)
-      self.redBars[i]:ClearAllPoints()
+    local xpThis = 0
+    if sAvg > 0 and xpLeft > 0 then
+      xpThis = math.min(sAvg, xpLeft)
+      xpLeft = xpLeft - xpThis
     end
-    
-    self.texts[i]:SetText(date("%H:%M", bucketTime))
+
+    r:Show()
+    r:SetBackdropColor(0, 0, 0, 0)              -- Keep backdrop transparent.
+    r:SetMinMaxValues(0, maxRight)
+    r:SetValue(xpThis)
+
+    local lbl = date("%H:%M", starts[lastIx] + j * 3600)
+    local showLbl = self.barWCache >= 14
+    self.texts[i]:SetText(showLbl and lbl or "")
+
+    if xpThis > 0 then
+      attachTooltip(r, lbl,
+                    string.format("%d XP predicted", xpThis), true)
+    else
+      r:SetScript("OnEnter", nil)
+      r:SetScript("OnLeave", nil)
+    end
   end
 end

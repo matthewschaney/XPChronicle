@@ -1,5 +1,4 @@
--- Utils.lua
--- Common helpers (formatting, bucket indexing)
+-- XPChronicle ▸ Utils.lua
 
 XPChronicle = XPChronicle or {}
 XPChronicle.Utils = {}

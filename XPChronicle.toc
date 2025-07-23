@@ -2,7 +2,7 @@
 ## Author: Matthew Schaney
 ## Version: 1.2.1
 ## Notes: Records session & lifetime average XP/hr for each character.
-## SavedVariables: AvgXPDB
+## SavedVariablesPerCharacter: AvgXPDB
 ## Interface: 11507, 50500
 
 Utils.lua
