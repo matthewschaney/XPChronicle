@@ -1,20 +1,19 @@
--- XPChronicle ▸ Options.lua                                                 --
--- Dedicated configuration panel opened from the minimap button.             --
+-- XPChronicle ▸ Options.lua
 
 XPChronicle         = XPChronicle or {}
 XPChronicle.Options = XPChronicle.Options or {}
 local Opt           = XPChronicle.Options
 
--- Short locals -------------------------------------------------------------- --
+-- Short locals ---------------------------------------------------------------
 local DB, UI, Graph = XPChronicle.DB, XPChronicle.UI, XPChronicle.Graph
 local MB            = XPChronicle.MinimapButton
 
--- Constants ----------------------------------------------------------------- --
+-- Constants ------------------------------------------------------------------
 local PANEL_W, PANEL_H = 380, 665
 local TEX              = "Interface\\Buttons\\WHITE8x8"
 local TAG              = "|cff33ff99XPChronicle|r: "
 
--- Helpers ------------------------------------------------------------------- --
+-- Helpers --------------------------------------------------------------------
 local function makeCheck(parent, label, initial, onClick)
   local c = CreateFrame("CheckButton", nil, parent,
                         "ChatConfigCheckButtonTemplate")
@@ -37,13 +36,11 @@ local function updateSwatch(tex, col)
   tex:SetColorTexture(col[1], col[2], col[3], 1)
 end
 
--- UI creation --------------------------------------------------------------- --
+-- UI creation ----------------------------------------------------------------
 function Opt:Create()
   if self.frame then return end
 
-  --------------------------------------------------------------------------- --
-  -- Shell ------------------------------------------------------------------ --
-  --------------------------------------------------------------------------- --
+  -- Shell --------------------------------------------------------------------
   local f = CreateFrame("Frame", "XPChronicleOptionsFrame",
                         UIParent, "BackdropTemplate")
   self.frame = f
@@ -63,9 +60,7 @@ function Opt:Create()
   title:SetPoint("TOP", 0, -12)
   title:SetText("XPChronicle Options")
 
-  --------------------------------------------------------------------------- --
-  -- Bucket slider ---------------------------------------------------------- --
-  --------------------------------------------------------------------------- --
+  -- Bucket slider ------------------------------------------------------------
   local s = CreateFrame("Slider", nil, f, "OptionsSliderTemplate")
   s:SetWidth(300)
   s:SetPoint("TOP", 0, -50)
@@ -83,9 +78,7 @@ function Opt:Create()
     self.Text:SetText("Buckets: " .. v)
   end)
 
-  --------------------------------------------------------------------------- --
-  -- Colour pickers --------------------------------------------------------- --
-  --------------------------------------------------------------------------- --
+  -- Colour pickers -----------------------------------------------------------
   local histBtn = makeButton(f, "History Bar Colour …", nil, 220)
   histBtn:SetPoint("TOPLEFT", 20, -100)
   local histSw  = f:CreateTexture(nil, "ARTWORK")
@@ -138,9 +131,7 @@ function Opt:Create()
     ColorPickerFrame:Show()
   end)
 
-  --------------------------------------------------------------------------- --
-  -- Position editors ------------------------------------------------------- --
-  --------------------------------------------------------------------------- --
+  -- Position editors ---------------------------------------------------------
   local function posEditor(label, getter, setter, yOff)
     local l = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     l:SetPoint("TOPLEFT", 20, yOff)
@@ -174,9 +165,7 @@ function Opt:Create()
             function(v) applyMainPos((AvgXPDB.pos and AvgXPDB.pos.x) or 0, v) end,
             -200)
 
-  --------------------------------------------------------------------------- --
-  -- Lock checkboxes -------------------------------------------------------- --
-  --------------------------------------------------------------------------- --
+  -- Lock checkboxes ----------------------------------------------------------
   local lockMain = makeCheck(f, "Lock XP Frame", AvgXPDB.mainLocked, function(v)
     AvgXPDB.mainLocked = v
     UI.back:SetMovable(not v)
@@ -197,9 +186,7 @@ function Opt:Create()
                              function(v) AvgXPDB.minimapLocked = v end)
   lockMini:SetPoint("TOPLEFT", 20, -285)
 
-  --------------------------------------------------------------------------- --
-  -- Timelock editbox ------------------------------------------------------- --
-  --------------------------------------------------------------------------- --
+  -- Timelock editbox ---------------------------------------------------------
   local tlLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   tlLabel:SetPoint("TOPLEFT", 20, -320)
   tlLabel:SetText("Timelock (min 0-59):")
@@ -222,9 +209,7 @@ function Opt:Create()
     self:ClearFocus()
   end)
 
-  --------------------------------------------------------------------------- --
-  -- Misc toggles ----------------------------------------------------------- --
-  --------------------------------------------------------------------------- --
+  -- Misc toggles -------------------------------------------------------------
 
   makeCheck(f, "Enable Right-click Frame Menu",
             AvgXPDB.frameMenuEnabled ~= false,
@@ -253,9 +238,7 @@ function Opt:Create()
   end)
   Opt.histChk:SetPoint("TOPLEFT", 20, -380)
 
-  --------------------------------------------------------------------------- --
-  -- Visibility toggles ----------------------------------------------------- --
-  --------------------------------------------------------------------------- --
+  -- Visibility toggles -------------------------------------------------------
 
   local visXP = makeCheck(f, "Show XP Frame", not AvgXPDB.mainHidden, function(v)
     AvgXPDB.mainHidden = not v
@@ -291,9 +274,7 @@ function Opt:Create()
   visMini:SetPoint("TOPLEFT", 20, -460)
 
 
-  --------------------------------------------------------------------------- --
-  -- Reset buttons ---------------------------------------------------------- --
-  --------------------------------------------------------------------------- --
+  -- Reset buttons ------------------------------------------------------------
   local totalW = 90 + 110 + 100 + 12
   local firstX = -math.floor(totalW / 2) + 45
 
@@ -319,9 +300,7 @@ function Opt:Create()
   end, 100)
   resetSess:SetPoint("LEFT", resetChar, "RIGHT", 6, 0)
 
-  --------------------------------------------------------------------------- --
-  -- Static popup ----------------------------------------------------------- --
-  --------------------------------------------------------------------------- --
+  -- Static popup -------------------------------------------------------------
   StaticPopupDialogs["XPCHRONICLE_CONFIRM_FULL_RESET"] = {
     text    = "This will erase all XPChronicle data for |cffd6261call|r " ..
               "characters.\nContinue?",
@@ -337,7 +316,7 @@ function Opt:Create()
   }
 end
 
--- Public API ---------------------------------------------------------------- --
+-- Public API -----------------------------------------------------------------
 function Opt:Toggle()
   if not self.frame then self:Create() end
   self.frame:SetShown(not self.frame:IsShown())

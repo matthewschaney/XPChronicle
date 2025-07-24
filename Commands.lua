@@ -11,12 +11,12 @@ local MB            = XPChronicle.MinimapButton
 local Opt           = XPChronicle.Options
 local Hist          = XPChronicle.History
 
--- Utility ------------------------------------------------------------------ --
+-- Utility --------------------------------------------------------------------
 local function say(msg)
   print("|cff33ff99XPChronicle|r: " .. msg)
 end
 
--- Handlers ----------------------------------------------------------------- --
+-- Handlers -------------------------------------------------------------------
 local function hReset()
   DB:Reset(); UI:CreateMainPanel(); Graph:BuildBars()
   DB:StartSession(); UI:Refresh()
@@ -51,7 +51,7 @@ local function hBuckets(arg)
   end
 end
 
--- Help --------------------------------------------------------------------- --
+-- Help -----------------------------------------------------------------------
 local function help()
   say("slash commands:")
   print(" /xpchronicle reset        - full data reset")
@@ -63,7 +63,7 @@ local function help()
   print(" (alias: /xpchron)")
 end
 
--- Dispatcher --------------------------------------------------------------- --
+-- Dispatcher -----------------------------------------------------------------
 local function slash(msg)
   msg = (msg or ""):lower():match("^%s*(.-)%s*$")
   if     msg == "reset"           then hReset()
@@ -76,7 +76,7 @@ local function slash(msg)
   else  help() end
 end
 
--- Register ----------------------------------------------------------------- --
+-- Register -------------------------------------------------------------------
 SLASH_XPCHRONICLE1 = "/xpchronicle"
 SLASH_XPCHRONICLE2 = "/xpchron"
 SlashCmdList["XPCHRONICLE"] = slash
