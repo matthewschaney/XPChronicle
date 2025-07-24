@@ -113,7 +113,16 @@ end
 -- Public API -----------------------------------------------------------------
 function H:Toggle()
   if not self.frame then self:Create() end
-  if self.frame:IsShown() then self.frame:Hide() else self:Update(); self.frame:Show() end
+   local willShow
+   if self.frame:IsShown() then
+     self.frame:Hide();  willShow = false
+   else
+     self:Update();     self.frame:Show();  willShow = true
+   end
+   AvgXPDB.histHidden = not willShow
+   if XPChronicle.Options and XPChronicle.Options.histChk then
+     XPChronicle.Options.histChk:SetChecked(willShow)
+   end
 end
 
 function H:Update()
