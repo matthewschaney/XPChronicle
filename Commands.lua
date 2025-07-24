@@ -1,92 +1,82 @@
 -- XPChronicle ▸ Commands.lua
 
-XPChronicle = XPChronicle or {}
-XPChronicle.Commands = {}
-local CMD   = XPChronicle.Commands
-local DB    = XPChronicle.DB
-local UI    = XPChronicle.UI
-local Graph = XPChronicle.Graph
-local MB    = XPChronicle.MinimapButton
+XPChronicle         = XPChronicle or {}
+XPChronicle.Commands= XPChronicle.Commands or {}
+local CMD           = XPChronicle.Commands
 
--- Utility: Standardized message printing.
-local function printMsg(msg)
+local DB            = XPChronicle.DB
+local UI            = XPChronicle.UI
+local Graph         = XPChronicle.Graph
+local MB            = XPChronicle.MinimapButton
+local Opt           = XPChronicle.Options
+local Hist          = XPChronicle.History
+
+-- Utility ------------------------------------------------------------------ --
+local function say(msg)
   print("|cff33ff99XPChronicle|r: " .. msg)
 end
 
--- Command Handlers.
-local function handleReset()
-  DB:Reset()
-  UI:CreateMainPanel()
-  Graph:BuildBars()
-  DB:StartSession()
-  UI:Refresh()
-  printMsg("data reset.")
+-- Handlers ----------------------------------------------------------------- --
+local function hReset()
+  DB:Reset(); UI:CreateMainPanel(); Graph:BuildBars()
+  DB:StartSession(); UI:Refresh()
+  say("data reset.")
 end
 
-local function handleGraph()
-  UI:ToggleGraph()
-end
+local function hGraph() UI:ToggleGraph() end
 
-local function handleMinimap()
-  if not MB then
-    printMsg("Error - MinimapButton module not found")
-    return
-  end
+local function hHistory() Hist:Toggle() end
 
-  if not MB.button then
-    MB:Create()
-    MB:HookMinimapUpdate()
-  end
+local function hOptions() Opt:Toggle() end
 
+local function hMinimap()
+  if not MB then say("Error: MinimapButton module missing"); return end
+  if not MB.button then MB:Create(); MB:HookMinimapUpdate() end
   if MB.button then
-    local isShown = MB.button:IsShown()
-    MB.button:SetShown(not isShown)
-    AvgXPDB.minimapHidden = isShown
-    printMsg("minimap button " .. (isShown and "hidden" or "shown"))
+    local vis = MB.button:IsShown()
+    MB.button:SetShown(not vis)
+    AvgXPDB.minimapHidden = vis
+    say("minimap button " .. (vis and "hidden" or "shown"))
   else
-    printMsg("Error - could not create minimap button")
+    say("Error: could not create minimap button")
   end
 end
 
-local function handleBuckets(arg)
+local function hBuckets(arg)
   local n = tonumber(arg)
   if n and n >= 2 and n <= 24 then
-    DB:SetBuckets(n)
-    Graph:BuildBars()
-    UI:Refresh()
+    DB:SetBuckets(n); Graph:BuildBars(); UI:Refresh()
   else
-    printMsg("choose 2-24 buckets.")
+    say("choose 2‑24 buckets.")
   end
 end
 
-local function showHelp()
-  printMsg("commands:")
-  print(" /xpchronicle reset - clear all data")
-  print(" /xpchronicle graph - toggle the graph display")
-  print(" /xpchronicle minimap - toggle minimap button")
-  print(" /xpchronicle buckets <n> - set graph length (2-24)")
+-- Help --------------------------------------------------------------------- --
+local function help()
+  say("slash commands:")
+  print(" /xpchronicle reset        - full data reset")
+  print(" /xpchronicle graph        - toggle bar graph")
+  print(" /xpchronicle history      - toggle history window")
+  print(" /xpchronicle minimap      - toggle minimap button")
+  print(" /xpchronicle options      - open options panel")
+  print(" /xpchronicle buckets <n>  - set buckets (2‑24)")
   print(" (alias: /xpchron)")
 end
 
--- Slash command dispatcher.
-local function slashHandler(msg)
+-- Dispatcher --------------------------------------------------------------- --
+local function slash(msg)
   msg = (msg or ""):lower():match("^%s*(.-)%s*$")
-
-  if msg == "reset" then
-    handleReset()
-  elseif msg == "graph" then
-    handleGraph()
-  elseif msg == "minimap" then
-    handleMinimap()
+  if     msg == "reset"           then hReset()
+  elseif msg == "graph"           then hGraph()
+  elseif msg == "history"         then hHistory()
+  elseif msg == "options"         then hOptions()
+  elseif msg == "minimap"         then hMinimap()
   elseif msg:match("^buckets%s+%d+") then
-    local arg = msg:match("%d+")
-    handleBuckets(arg)
-  else
-    showHelp()
-  end
+         hBuckets(msg:match("%d+"))
+  else  help() end
 end
 
--- Register slash commands.
+-- Register ----------------------------------------------------------------- --
 SLASH_XPCHRONICLE1 = "/xpchronicle"
 SLASH_XPCHRONICLE2 = "/xpchron"
-SlashCmdList["XPCHRONICLE"] = slashHandler
+SlashCmdList["XPCHRONICLE"] = slash
