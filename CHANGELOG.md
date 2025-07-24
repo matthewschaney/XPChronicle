@@ -1,12 +1,18 @@
 # Changelog
 
-## v1.2.1 - 2025-07-22
+## v1.3.0 - 2025-07-24
+- Added dedicated options panel
+- Make options panel accessible by right clicking minimap icon
+- Allow full customization of the addon, including bar colors
+- Updated the slash commands
+
+## v1.2.1 - 2025-07-23
 - Improved the look of the graph
 - Removed graph labels
 - Fixed prediction mode
 - Made data persist on all characters correctly
 
-## v1.2.0 – 2025-07-21
+## v1.2.0 – 2025-07-22
 - Updated slash commands
 - Moved the icon to being locked to the minimap
 - Window positions are remembered
@@ -23,9 +29,9 @@
 - Introduced minimap button to open/close the XP history window  
 
 ## v1.0.1 – 2025-07-21
-- Corrected the Interface version declaration so XPChronicle no longer shows as out‑of‑date
+- Corrected the Interface version declaration
 
-## v1.0.0 – 2025-07-20
+## v1.0.0 – 2025-07-21
 - Initial public release  
 - Session & lifetime XP tracking  
 - Visual hourly graph  
