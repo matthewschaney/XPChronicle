@@ -80,31 +80,32 @@ function MB:Create()
   b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
   b:SetClampedToScreen(true)
 
-  -- Click behaviour.
+  -- Click behaviour (L: History, R: Options).
   b:SetScript("OnClick", function(_, btn)
     if btn == "LeftButton" then
       XPChronicle.History:Toggle()
     else -- RightButton
-      XPChronicle.UI:ToggleGraph()
+      XPChronicle.Options:Toggle()
     end
   end)
 
-  -- Drag behaviour.
-  b:SetScript("OnDragStart", function(self)
-    self:SetScript("OnUpdate", function()
-      AvgXPDB.minimapPos = saveCursorAngle()
-      MB:UpdatePosition()
+  -- Drag behaviour -----------------------------------------------------------
+    b:SetScript("OnDragStart", function(self)
+      if AvgXPDB.minimapLocked then return end
+      self:SetScript("OnUpdate", function()
+        AvgXPDB.minimapPos = saveCursorAngle()
+        MB:UpdatePosition()
+      end)
     end)
-  end)
-  b:SetScript("OnDragStop", function(self) self:SetScript("OnUpdate", nil) end)
+    b:SetScript("OnDragStop",  function(self) self:SetScript("OnUpdate", nil) end)
 
   -- Tooltip.
   b:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_LEFT")
     GameTooltip:AddLine("XPChronicle", .2, .8, 1)
-    GameTooltip:AddLine("Left‑click: History", 1, 1, 1)
-    GameTooltip:AddLine("Right‑click: Toggle Graph", 1, 1, 1)
-    GameTooltip:AddLine("Drag: Reposition", 1, 1, 1)
+    GameTooltip:AddLine("Left-click: History", 1, 1, 1)
+    GameTooltip:AddLine("Right-click: Toggle Graph", 1, 1, 1)
+    GameTooltip:AddLine("Drag: Reposition", 1, 1, 1)
     GameTooltip:Show()
   end)
   b:SetScript("OnLeave", GameTooltip_Hide)
