@@ -59,7 +59,7 @@ local function help()
   print(" /xpchronicle history      - toggle history window")
   print(" /xpchronicle minimap      - toggle minimap button")
   print(" /xpchronicle options      - open options panel")
-  print(" /xpchronicle buckets <n>  - set buckets (2‑24)")
+  print(" /xpchronicle buckets <n>  - set buckets (2-24)")
   print(" (alias: /xpchron)")
 end
 
