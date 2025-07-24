@@ -231,8 +231,14 @@ function Opt:Create()
     if v then
       UI.back:Show()
       Graph.frame:SetParent(UI.back)
+      if XPChronicle.History.frame then
+        XPChronicle.History.frame:SetParent(UI.back)
+      end
     else
       Graph.frame:SetParent(UIParent)
+      if XPChronicle.History.frame then
+        XPChronicle.History.frame:SetParent(UIParent)
+      end
       UI.back:Hide()
     end
   end)

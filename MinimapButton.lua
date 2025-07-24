@@ -89,14 +89,15 @@ function MB:Create()
     end
   end)
 
-  -- Drag behaviour.
-  b:SetScript("OnDragStart", function(self)
-    self:SetScript("OnUpdate", function()
-      AvgXPDB.minimapPos = saveCursorAngle()
-      MB:UpdatePosition()
+  -- Drag behaviour -----------------------------------------------------------
+    b:SetScript("OnDragStart", function(self)
+      if AvgXPDB.minimapLocked then return end
+      self:SetScript("OnUpdate", function()
+        AvgXPDB.minimapPos = saveCursorAngle()
+        MB:UpdatePosition()
+      end)
     end)
-  end)
-  b:SetScript("OnDragStop", function(self) self:SetScript("OnUpdate", nil) end)
+    b:SetScript("OnDragStop",  function(self) self:SetScript("OnUpdate", nil) end)
 
   -- Tooltip.
   b:SetScript("OnEnter", function(self)
