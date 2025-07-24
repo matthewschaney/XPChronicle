@@ -24,11 +24,11 @@ local function InitLockMenu()
   end)
 end
 
--- Frame setup --------------------------------------------------------------- --
+-- Frame setup ----------------------------------------------------------------
 function H:Create()
   if self.frame then return end
 
-  -- Frame shell ------------------------------------------------------------- --
+  -- Frame shell --------------------------------------------------------------
   local parent = UI.back:IsShown() and UI.back or UIParent
   local f = CreateFrame("Frame", "XPChronicleHistoryFrame",
                         parent, "BackdropTemplate")
@@ -41,7 +41,7 @@ function H:Create()
     insets   = { left = 5, right = 5, top = 5, bottom = 5 },
   })
 
-  -- Positioning ------------------------------------------------------------- --
+  -- Positioning --------------------------------------------------------------
   if AvgXPDB.historyPos then
     f:SetPoint(AvgXPDB.historyPos.point, UIParent,
                AvgXPDB.historyPos.relativePoint,
@@ -50,7 +50,7 @@ function H:Create()
     f:SetPoint("CENTER")
   end
 
-  -- Drag & lock ------------------------------------------------------------- --
+  -- Drag & lock --------------------------------------------------------------
   f:EnableMouse(true)
   f:RegisterForDrag("LeftButton")
   f:SetMovable(not AvgXPDB.historyLocked)
@@ -65,18 +65,18 @@ function H:Create()
     end
   end)
 
-  -- Lock menu --------------------------------------------------------------- --
+  -- Lock menu ----------------------------------------------------------------
   InitLockMenu()
   f:SetScript("OnMouseUp", function(_, btn)
     if btn == "RightButton" then ToggleDropDownMenu(1, nil, H.lockMenu, "cursor") end
   end)
 
-  -- Title ------------------------------------------------------------------- --
+  -- Title --------------------------------------------------------------------
   local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
   title:SetPoint("TOP", 0, -10)
   title:SetText("XPChronicle History")
 
-  -- Mode buttons ------------------------------------------------------------ --
+  -- Mode buttons -------------------------------------------------------------
   self.modes = {}
   for i, name in ipairs({ "Event", "Hour", "Day" }) do
     local key = name:lower()
@@ -88,7 +88,7 @@ function H:Create()
     self.modes[key] = b
   end
 
-  -- Scroll area ------------------------------------------------------------- --
+  -- Scroll area --------------------------------------------------------------
   local scroll = CreateFrame("ScrollFrame", "XPChronicleHistoryScrollFrame",
                              f, "UIPanelScrollFrameTemplate")
   scroll:SetPoint("TOPLEFT", 20, -60)
@@ -110,7 +110,7 @@ function H:Create()
   f:Hide()
 end
 
--- Public API ---------------------------------------------------------------- --
+-- Public API -----------------------------------------------------------------
 function H:Toggle()
   if not self.frame then self:Create() end
   if self.frame:IsShown() then self.frame:Hide() else self:Update(); self.frame:Show() end
@@ -119,11 +119,11 @@ end
 function H:Update()
   if not self.frame then return end
 
-  -- Highlight active button ------------------------------------------------- --
+  -- Highlight active button --------------------------------------------------
   local mode = AvgXPDB.historyMode or "hour"
   for m, btn in pairs(self.modes) do btn:SetEnabled(m ~= mode) end
 
-  -- Build text lines -------------------------------------------------------- --
+  -- Build text lines ---------------------------------------------------------
   local lines = {}
   if mode == "event" then
     local byDay = {}
@@ -168,7 +168,7 @@ function H:Update()
     end
   end
 
-  -- Push to fontstring ------------------------------------------------------ --
+  -- Push to fontstring -------------------------------------------------------
   self.textFS:SetText(table.concat(lines, "\n"))
   self.content:SetHeight(#lines * 14)
 end
