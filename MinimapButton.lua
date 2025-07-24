@@ -80,12 +80,12 @@ function MB:Create()
   b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
   b:SetClampedToScreen(true)
 
-  -- Click behaviour.
+  -- Click behaviour (L: History, R: Options).
   b:SetScript("OnClick", function(_, btn)
     if btn == "LeftButton" then
       XPChronicle.History:Toggle()
     else -- RightButton
-      XPChronicle.UI:ToggleGraph()
+      XPChronicle.Options:Toggle()
     end
   end)
 

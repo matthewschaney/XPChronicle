@@ -15,16 +15,29 @@ local RED             = { 1,  .2, .2 }         -- Fill colour for prediction.
 local BK              = { 0,  0,  0,  .6 }     -- 60 % black for backing.
 local TEX             = "Interface\\Buttons\\WHITE8x8"
 
+-- User‑selected bar colour ---------------------------------------------------
+local function currentBarColour()
+  -- Fallback to the old default if the player hasn’t chosen a colour yet.
+  return AvgXPDB.barColor or BLUE
+end
+
 -- Helpers --------------------------------------------------------------------
 local function createStatusBar(parent, w, h, col)
   local bar = CreateFrame("StatusBar", nil, parent, "BackdropTemplate")
   bar:SetSize(w, h)
   bar:SetOrientation("VERTICAL")
   bar:SetStatusBarTexture(TEX)
-  bar:GetStatusBarTexture():SetVertexColor(col[1], col[2], col[3])
-  bar:SetBackdrop({ bgFile = TEX })            -- Needed for tooltip hitbox.
-  bar:SetBackdropColor(0, 0, 0, 0)             -- Transparent backdrop.
+  bar:SetStatusBarColor(col[1], col[2], col[3])
+  bar:SetBackdrop({ bgFile = TEX })
+  bar:SetBackdropColor(0, 0, 0, 0)
   return bar
+end
+
+local function currentBarColour()
+  if AvgXPDB and type(AvgXPDB.barColor) == "table" then
+    return AvgXPDB.barColor
+  end
+  return BLUE
 end
 
 local function attachTooltip(frame, label, value, isPred)
@@ -58,14 +71,15 @@ function Graph:Init()
 end
 
 -- BuildBars ------------------------------------------------------------------
+-- BuildBars ------------------------------------------------------------------
 function Graph:BuildBars()
   self:Init()
 
   local NB      = AvgXPDB.buckets
   local BAR_W   = math.floor((UI.PANEL_W - (NB - 1) * GAP) / NB)
-  local TOT_W   = BAR_W * NB + GAP * (NB - 1) -- Exact width of all bars.
+  local TOT_W   = BAR_W * NB + GAP * (NB - 1)   -- Exact width of all bars.
 
-  -- Resize the main panel and backdrop so no extra black stripe appears.
+  -- Resize the main panel & backdrop so no extra stripe appears.
   self.frame:SetWidth(TOT_W)
   self.backdrop:SetAllPoints(self.frame)
   if UI.back then
@@ -78,23 +92,26 @@ function Graph:BuildBars()
   self.redBars  = self.redBars  or {}
   self.texts    = self.texts    or {}
 
-  -- Trim tables if the bucket count was reduced.
+  -- Trim tables if bucket count was reduced.
   for i = #self.bars, NB + 1, -1 do
     self.bars[i]:Hide();    self.bars[i]    = nil
     self.redBars[i]:Hide(); self.redBars[i] = nil
     self.texts[i]:Hide();   self.texts[i]   = nil
   end
 
-  -- Hide any remaining widgets.
+  -- Hide any remaining widgets (helps with /reload scaling).
   for _, tbl in ipairs { self.bars, self.redBars, self.texts } do
     for _, w in ipairs(tbl) do w:Hide() end
   end
 
-  -- Create bars if needed and reposition all bars.
+  -- Create bars if needed and position all bars.
   for i = 1, NB do
     if not self.bars[i] then
-      self.bars[i]    = createStatusBar(self.frame, BAR_W, BAR_H, BLUE)
+      -- history bar uses CURRENT player‑selected colour ↓
+      self.bars[i]    = createStatusBar(self.frame, BAR_W, BAR_H,
+                                        currentBarColour())
       self.redBars[i] = createStatusBar(self.frame, BAR_W, BAR_H, RED)
+
       self.texts[i]   = self.frame:CreateFontString(nil, "OVERLAY",
                                                     "GameFontNormalSmall")
       self.texts[i]:SetPoint("TOP", self.bars[i], "BOTTOM", 0, -2)
@@ -102,6 +119,7 @@ function Graph:BuildBars()
       self.bars[i]:SetSize(BAR_W, BAR_H)
       self.redBars[i]:SetSize(BAR_W, BAR_H)
     end
+
     local x = (i - 1) * (BAR_W + GAP)
     self.bars[i]:SetPoint("BOTTOMLEFT", self.frame, "BOTTOMLEFT", x, 0)
     self.redBars[i]:SetPoint("BOTTOMLEFT", self.frame, "BOTTOMLEFT", x, 0)
@@ -133,7 +151,7 @@ function Graph:Refresh()
       bar:Show()
       bar:SetMinMaxValues(0, maxHist)
       bar:SetValue(xp)
-      bar:GetStatusBarTexture():SetVertexColor(unpack(BLUE))
+      bar:GetStatusBarTexture():SetVertexColor(unpack(currentBarColour()))
       self.redBars[i]:Hide()
 
       local showLbl = self.barWCache >= 14
@@ -163,7 +181,7 @@ function Graph:Refresh()
     bar:Show()
     bar:SetMinMaxValues(0, maxLeft)
     bar:SetValue(xp)
-    bar:GetStatusBarTexture():SetVertexColor(unpack(BLUE))
+    bar:GetStatusBarTexture():SetVertexColor(unpack(currentBarColour()))
     self.redBars[i]:Hide()
 
     local showLbl = self.barWCache >= 14

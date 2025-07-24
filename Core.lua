@@ -5,10 +5,10 @@ XPChronicle = XPChronicle or {}
 
 local TAG = '|cff33ff99XPChronicle|r: '
 
--- Timelock popup.
+-- Timelock popup -------------------------------------------------------------
 local function CreateTimelockPopup()
     StaticPopupDialogs["XPCHRONICLE_SET_TIMELOCK"] = {
-        text         = "Enter minutes past the hour to lock bars to (0-59):",
+        text         = "Enter minutes past the hour to lock bars to (0‑59):",
         button1      = ACCEPT,
         button2      = CANCEL,
         hasEditBox   = true,
@@ -31,13 +31,13 @@ local function CreateTimelockPopup()
                 XPChronicle.UI:Refresh()
                 print(('%sgrid locked @ %dm'):format(TAG, v))
             else
-                print(TAG .. 'please enter a value between 0-59.')
+                print(TAG .. 'please enter a value between 0‑59.')
             end
         end,
     }
 end
 
--- Private helpers.
+-- Private helpers ------------------------------------------------------------
 local DB, UI, Graph, MB
 local REFRESH_PERIOD  = 0.25
 local refreshAccumulator = 0
@@ -60,6 +60,14 @@ function EventHandlers:PLAYER_LOGIN()
 
     UI:CreateMainPanel()
     Graph:BuildBars()
+    XPChronicle.Options:Create()
+
+    --bHonour “Hide XP frame” preference.
+    if AvgXPDB.mainHidden then
+        UI.back:Hide()
+        Graph.frame:SetParent(UIParent)
+    end
+
     DB:StartSession()
     UI:Refresh()
 

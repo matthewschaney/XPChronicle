@@ -32,9 +32,9 @@ local function InitMainMenu()
     UIDropDownMenu_AddButton(info, level)
 
     -- Time‑lock --------------------------------------------------------------
-    info = UIDropDownMenu_CreateInfo()
-    info.text = "Set Time Lock…"
-    info.func = function() StaticPopup_Show("XPCHRONICLE_SET_TIMELOCK") end
+    info           = UIDropDownMenu_CreateInfo()
+    info.text      = "Set Time Lock…"
+    info.func      = function() StaticPopup_Show("XPCHRONICLE_SET_TIMELOCK") end
     UIDropDownMenu_AddButton(info, level)
 
     -- Prediction mode --------------------------------------------------------
@@ -84,7 +84,7 @@ function UI:CreateMainPanel()
   -- Right‑click menu ---------------------------------------------------------
   InitMainMenu()
   back:SetScript("OnMouseUp", function(_, btn)
-    if btn == "RightButton" then
+    if btn == "RightButton" and (AvgXPDB.frameMenuEnabled ~= false) then
       ToggleDropDownMenu(1, nil, UI.mainMenu, "cursor")
     end
   end)
