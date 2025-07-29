@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.3.1 - 2025-07-29
+- Bump the version number.
+- Fix options panel not moving properly.
+
 ## v1.3.0 - 2025-07-24
 - Added dedicated options panel
 - Make options panel accessible by right clicking minimap icon
