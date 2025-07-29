@@ -52,8 +52,19 @@ function Opt:Create()
   f:SetMovable(true)
   f:EnableMouse(true)
   f:RegisterForDrag("LeftButton")
-  f:SetScript("OnDragStart", f.StartMoving)
-  f:SetScript("OnDragStop",  f.StopMoving)
+  
+  f:SetClampedToScreen(true)
+  f:SetScript("OnDragStart", function(self)
+    self:StartMoving()
+  end)
+  f:SetScript("OnDragStop", function(self)
+    self:StopMovingOrSizing()
+  end)
+  
+  f:SetScript("OnHide", function(self)
+    self:StopMovingOrSizing()
+  end)
+  
   f:Hide()
 
   local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
