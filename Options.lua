@@ -1,4 +1,4 @@
--- XPChronicle ▸ Options.lua (Updated)
+-- XPChronicle ▸ Options.lua (Updated to Blizzard BasicFrameTemplateWithInset)
 
 XPChronicle         = XPChronicle or {}
 XPChronicle.Options = XPChronicle.Options or {}
@@ -10,7 +10,6 @@ local MB            = XPChronicle.MinimapButton
 
 -- Constants ------------------------------------------------------------------
 local PANEL_W, PANEL_H = 380, 700
-local TEX              = "Interface\\Buttons\\WHITE8x8"
 local TAG              = "|cff33ff99XPChronicle|r: "
 
 -- Helpers --------------------------------------------------------------------
@@ -40,40 +39,34 @@ end
 function Opt:Create()
   if self.frame then return end
 
-  -- Shell --------------------------------------------------------------------
-  local f = CreateFrame("Frame", "XPChronicleOptionsFrame",
-                        UIParent, "BackdropTemplate")
+  -- Shell (Blizzard frame style to match Character/Report) -------------------
+  local f = CreateFrame("Frame", "XPChronicleOptionsFrame", UIParent, "BasicFrameTemplateWithInset")
   self.frame = f
   f:SetSize(PANEL_W, PANEL_H)
   f:SetPoint("CENTER")
-  f:SetBackdrop({ bgFile = TEX, edgeFile = TEX,
-                  tile = false, edgeSize = 1 })
-  f:SetBackdropColor(0, 0, 0, 0.75)
-  f:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
+  f:Hide()
   f:SetMovable(true)
   f:EnableMouse(true)
   f:RegisterForDrag("LeftButton")
-  
   f:SetClampedToScreen(true)
-  f:SetScript("OnDragStart", function(self)
-    self:StartMoving()
-  end)
-  f:SetScript("OnDragStop", function(self)
-    self:StopMovingOrSizing()
-  end)
-  
-  f:SetScript("OnHide", function(self)
-    self:StopMovingOrSizing()
-  end)
-  
-  f:Hide()
+  f:SetScript("OnDragStart", function(self) self:StartMoving() end)
+  f:SetScript("OnDragStop",  function(self) self:StopMovingOrSizing() end)
+  f:SetScript("OnHide",      function(self) self:StopMovingOrSizing() end)
 
-  local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-  title:SetPoint("TOP", 0, -12)
-  title:SetText("XPChronicle Options")
+  -- Title (prefer the template's TitleText if available) ---------------------
+  if f.TitleText then
+    f.TitleText:SetText("XPChronicle Options")
+  else
+    local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    title:SetPoint("TOP", 0, -8)
+    title:SetText("XPChronicle Options")
+  end
+
+  -- If the template exposes an inset region, anchor into it nicely -----------
+  local anchorParent = f.Inset or f
 
   -- Bucket slider ------------------------------------------------------------
-  local s = CreateFrame("Slider", nil, f, "OptionsSliderTemplate")
+  local s = CreateFrame("Slider", nil, anchorParent, "OptionsSliderTemplate")
   s:SetWidth(300)
   s:SetPoint("TOP", 0, -50)
   s:SetMinMaxValues(2, 24)
@@ -91,9 +84,9 @@ function Opt:Create()
   end)
 
   -- Colour pickers -----------------------------------------------------------
-  local histBtn = makeButton(f, "History Bar Colour …", nil, 220)
+  local histBtn = makeButton(anchorParent, "History Bar Colour …", nil, 220)
   histBtn:SetPoint("TOPLEFT", 20, -100)
-  local histSw  = f:CreateTexture(nil, "ARTWORK")
+  local histSw  = anchorParent:CreateTexture(nil, "ARTWORK")
   histSw:SetSize(24, 24)
   histSw:SetPoint("LEFT", histBtn, "RIGHT", 8, 0)
   updateSwatch(histSw, AvgXPDB.barColor or { 0.2, 0.8, 1 })
@@ -107,9 +100,7 @@ function Opt:Create()
       Graph:Refresh()
     end
     ColorPickerFrame:Hide()
-    ColorPickerFrame.func       = function()
-      apply(ColorPickerFrame:GetColorRGB())
-    end
+    ColorPickerFrame.func       = function() apply(ColorPickerFrame:GetColorRGB()) end
     ColorPickerFrame.swatchFunc = ColorPickerFrame.func
     ColorPickerFrame.cancelFunc = function() apply(unpack(cur)) end
     ColorPickerFrame.hasOpacity = false
@@ -117,9 +108,9 @@ function Opt:Create()
     ColorPickerFrame:Show()
   end)
 
-  local predBtn = makeButton(f, "Prediction Bar Colour …", nil, 220)
+  local predBtn = makeButton(anchorParent, "Prediction Bar Colour …", nil, 220)
   predBtn:SetPoint("TOPLEFT", 20, -135)
-  local predSw  = f:CreateTexture(nil, "ARTWORK")
+  local predSw  = anchorParent:CreateTexture(nil, "ARTWORK")
   predSw:SetSize(24, 24)
   predSw:SetPoint("LEFT", predBtn, "RIGHT", 8, 0)
   updateSwatch(predSw, AvgXPDB.predColor or { 1, 0.2, 0.2 })
@@ -133,9 +124,7 @@ function Opt:Create()
       Graph:Refresh()
     end
     ColorPickerFrame:Hide()
-    ColorPickerFrame.func       = function()
-      apply(ColorPickerFrame:GetColorRGB())
-    end
+    ColorPickerFrame.func       = function() apply(ColorPickerFrame:GetColorRGB()) end
     ColorPickerFrame.swatchFunc = ColorPickerFrame.func
     ColorPickerFrame.cancelFunc = function() apply(unpack(cur)) end
     ColorPickerFrame.hasOpacity = false
@@ -145,10 +134,10 @@ function Opt:Create()
 
   -- Position editors ---------------------------------------------------------
   local function posEditor(label, getter, setter, yOff)
-    local l = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    local l = anchorParent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     l:SetPoint("TOPLEFT", 20, yOff)
     l:SetText(label)
-    local e = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
+    local e = CreateFrame("EditBox", nil, anchorParent, "InputBoxTemplate")
     e:SetSize(50, 20)
     e:SetAutoFocus(false)
     e:SetPoint("LEFT", l, "RIGHT", 4, 0)
@@ -178,13 +167,13 @@ function Opt:Create()
             -200)
 
   -- Lock checkboxes ----------------------------------------------------------
-  local lockMain = makeCheck(f, "Lock XP Frame", AvgXPDB.mainLocked, function(v)
+  local lockMain = makeCheck(anchorParent, "Lock XP Frame", AvgXPDB.mainLocked, function(v)
     AvgXPDB.mainLocked = v
     UI.back:SetMovable(not v)
   end)
   lockMain:SetPoint("TOPLEFT", 20, -235)
 
-  local lockReport = makeCheck(f, "Lock Report Frame",
+  local lockReport = makeCheck(anchorParent, "Lock Report Frame",
                                AvgXPDB.reportLocked or false, function(v)
     AvgXPDB.reportLocked = v
     if XPChronicle.Report.frame then
@@ -193,16 +182,16 @@ function Opt:Create()
   end)
   lockReport:SetPoint("TOPLEFT", 20, -260)
 
-  local lockMini = makeCheck(f, "Lock Minimap Button",
+  local lockMini = makeCheck(anchorParent, "Lock Minimap Button",
                              AvgXPDB.minimapLocked or false,
                              function(v) AvgXPDB.minimapLocked = v end)
   lockMini:SetPoint("TOPLEFT", 20, -285)
 
   -- Timelock editbox ---------------------------------------------------------
-  local tlLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  local tlLabel = anchorParent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   tlLabel:SetPoint("TOPLEFT", 20, -320)
   tlLabel:SetText("Timelock (min 0-59):")
-  local tlEdit  = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
+  local tlEdit  = CreateFrame("EditBox", nil, anchorParent, "InputBoxTemplate")
   tlEdit:SetSize(40, 20)
   tlEdit:SetAutoFocus(false)
   tlEdit:SetPoint("LEFT", tlLabel, "RIGHT", 4, 0)
@@ -222,27 +211,24 @@ function Opt:Create()
   end)
 
   -- Misc toggles -------------------------------------------------------------
-
-  makeCheck(f, "Enable Right-click Frame Menu",
+  makeCheck(anchorParent, "Enable Right-click Frame Menu",
             AvgXPDB.frameMenuEnabled ~= false,
             function(v) AvgXPDB.frameMenuEnabled = v end)
     :SetPoint("TOPLEFT", 20, -355)
 
-  makeCheck(f, "Prediction Mode", AvgXPDB.predictionMode, function(v)
+  makeCheck(anchorParent, "Prediction Mode", AvgXPDB.predictionMode, function(v)
     AvgXPDB.predictionMode = v
     Graph:BuildBars()
     Graph:Refresh()
   end):SetPoint("TOPLEFT", 230, -355)
 
-  -- Auto-open report with C checkbox
-  makeCheck(f, "Auto-open Report with Character Panel (C)",
+  makeCheck(anchorParent, "Auto-open Report with Character Panel (C)",
             AvgXPDB.autoOpenReport or false,
             function(v) AvgXPDB.autoOpenReport = v end)
     :SetPoint("TOPLEFT", 20, -380)
 
   -- Visibility toggles -------------------------------------------------------
-
-  local visXP = makeCheck(f, "Show XP Frame", not AvgXPDB.mainHidden, function(v)
+  local visXP = makeCheck(anchorParent, "Show XP Frame", not AvgXPDB.mainHidden, function(v)
     AvgXPDB.mainHidden = not v
     if v then
       UI.back:Show()
@@ -260,14 +246,14 @@ function Opt:Create()
   end)
   visXP:SetPoint("TOPLEFT", 20, -410)
 
-  local visBar = makeCheck(f, "Show Bar Frame", not AvgXPDB.graphHidden,
+  local visBar = makeCheck(anchorParent, "Show Bar Frame", not AvgXPDB.graphHidden,
                            function(v)
     Graph.frame:SetShown(v)
     AvgXPDB.graphHidden = not v
   end)
   visBar:SetPoint("TOPLEFT", 20, -435)
 
-  local visMini = makeCheck(f, "Show Minimap Button",
+  local visMini = makeCheck(anchorParent, "Show Minimap Button",
                             not AvgXPDB.minimapHidden, function(v)
     if not MB.button then MB:Create() end
     MB.button:SetShown(v)
@@ -275,17 +261,16 @@ function Opt:Create()
   end)
   visMini:SetPoint("TOPLEFT", 20, -460)
 
-
   -- Reset buttons ------------------------------------------------------------
   local totalW = 90 + 110 + 100 + 12
   local firstX = -math.floor(totalW / 2) + 45
 
-  local resetAll = makeButton(f, "Full Reset", function()
+  local resetAll = makeButton(anchorParent, "Full Reset", function()
     StaticPopup_Show("XPCHRONICLE_CONFIRM_FULL_RESET")
   end, 90)
   resetAll:SetPoint("BOTTOM", firstX, 20)
 
-  local resetChar = makeButton(f, "Character Reset", function()
+  local resetChar = makeButton(anchorParent, "Character Reset", function()
     table.wipe(AvgXPDB.hourBuckets)
     table.wipe(AvgXPDB.history)
     table.wipe(AvgXPDB.historyEvents)
@@ -296,7 +281,7 @@ function Opt:Create()
   end, 110)
   resetChar:SetPoint("LEFT", resetAll, "RIGHT", 6, 0)
 
-  local resetSess = makeButton(f, "Session Reset", function()
+  local resetSess = makeButton(anchorParent, "Session Reset", function()
     DB:StartSession()
     UI:Refresh()
   end, 100)
@@ -304,8 +289,7 @@ function Opt:Create()
 
   -- Static popup -------------------------------------------------------------
   StaticPopupDialogs["XPCHRONICLE_CONFIRM_FULL_RESET"] = {
-    text    = "This will erase all XPChronicle data for |cffd6261call|r " ..
-              "characters.\nContinue?",
+    text    = "This will erase all XPChronicle data for |cffd6261call|r characters.\nContinue?",
     button1 = YES,
     button2 = CANCEL,
     whileDead    = true,
@@ -323,4 +307,3 @@ function Opt:Toggle()
   if not self.frame then self:Create() end
   self.frame:SetShown(not self.frame:IsShown())
 end
-
