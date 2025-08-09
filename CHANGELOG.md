@@ -1,5 +1,16 @@
 # Changelog
 
+## v2.0.0 - 2025-08-09 
+- Create the leveling report.
+- Move the events panel to a tab in the leveling report.
+- Make the minimap button open the leveling report.
+- Add an option for the leveling report in the options menu.
+- Expanded the XP events, adding coloring and specific things.
+- Changed options menu to look like Blizzard UI.
+- Dramatically improved the look of the graph.
+- Improved how the graph resizes.
+- Updated options available in the options menu.
+
 ## v1.3.1 - 2025-07-29
 - Bump the version number.
 - Fix options panel not moving properly.
