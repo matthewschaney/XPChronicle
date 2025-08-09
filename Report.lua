@@ -1,5 +1,3 @@
--- XPChronicle ▸ Report.lua
-
 XPChronicle = XPChronicle or {}
 XPChronicle.Report = XPChronicle.Report or {}
 local Report = XPChronicle.Report
@@ -64,7 +62,7 @@ function Report:Create()
   f:SetSize(300, 420)
   f:SetPoint("CENTER")
   f:Hide()
-  f:SetMovable(false)
+  f:SetMovable(not (AvgXPDB.reportLocked or false))
   f:EnableMouse(true)
 
   f.title = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -376,31 +374,33 @@ function Report:UpdateEvents()
   self.eventsScrollContent:SetHeight(#lines * 14)
 end
 
+-- Toggle behavior ------------------------------------------------------------
+-- Now ALWAYS closes CharacterFrame when closing the report (so minimap toggle
+-- behaves identically whether autoOpenReport is on or off).
 function Report:Toggle()
   if not self.frame then self:Create() end
+
   if self.frame:IsShown() then
+    -- CLOSE: hide report and close CharacterFrame if it's open.
     self.frame:Hide()
-    if CharacterFrame and CharacterFrame:IsShown() and not AvgXPDB.autoOpenReport then
+    if CharacterFrame and CharacterFrame:IsShown() then
       ToggleCharacter("PaperDollFrame")
     end
+    return
+  end
+
+  -- OPEN
+  if CharacterFrame and CharacterFrame:IsShown() then
+    -- Character is already open; just show/refresh the report.
+    self.frame:Show(); self:ShowReportTab(); self:Refresh()
   else
-    if self.frame:GetParent() == CharacterFrame or not CharacterFrame then
-      if not CharacterFrame or not CharacterFrame:IsShown() then
-        ToggleCharacter("PaperDollFrame")
-        if not AvgXPDB.autoOpenReport then
-          C_Timer.After(0, function()
-            if CharacterFrame and CharacterFrame:IsShown() then
-              self.frame:Show(); self:ShowReportTab(); self:Refresh()
-            end
-          end)
-        end
-      else
+    -- Open Character panel; report will attach & show (for both modes).
+    ToggleCharacter("PaperDollFrame")
+    C_Timer.After(0, function()
+      if CharacterFrame and CharacterFrame:IsShown() then
         self.frame:Show(); self:ShowReportTab(); self:Refresh()
       end
-    else
-      self.frame:ClearAllPoints(); self.frame:SetPoint("CENTER"); self.frame:SetParent(UIParent)
-      self.frame:Show(); self:ShowReportTab(); self:Refresh()
-    end
+    end)
   end
 end
 

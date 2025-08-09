@@ -1,5 +1,3 @@
--- XPChronicle ▸ Options.lua (Updated to Blizzard BasicFrameTemplateWithInset)
-
 XPChronicle         = XPChronicle or {}
 XPChronicle.Options = XPChronicle.Options or {}
 local Opt           = XPChronicle.Options
@@ -14,8 +12,7 @@ local TAG              = "|cff33ff99XPChronicle|r: "
 
 -- Helpers --------------------------------------------------------------------
 local function makeCheck(parent, label, initial, onClick)
-  local c = CreateFrame("CheckButton", nil, parent,
-                        "ChatConfigCheckButtonTemplate")
+  local c = CreateFrame("CheckButton", nil, parent, "ChatConfigCheckButtonTemplate")
   c:SetSize(24, 24)
   c.Text:SetText(label)
   c:SetChecked(initial)
@@ -39,7 +36,6 @@ end
 function Opt:Create()
   if self.frame then return end
 
-  -- Shell (Blizzard frame style to match Character/Report) -------------------
   local f = CreateFrame("Frame", "XPChronicleOptionsFrame", UIParent, "BasicFrameTemplateWithInset")
   self.frame = f
   f:SetSize(PANEL_W, PANEL_H)
@@ -53,7 +49,6 @@ function Opt:Create()
   f:SetScript("OnDragStop",  function(self) self:StopMovingOrSizing() end)
   f:SetScript("OnHide",      function(self) self:StopMovingOrSizing() end)
 
-  -- Title (prefer the template's TitleText if available) ---------------------
   if f.TitleText then
     f.TitleText:SetText("XPChronicle Options")
   else
@@ -62,7 +57,6 @@ function Opt:Create()
     title:SetText("XPChronicle Options")
   end
 
-  -- If the template exposes an inset region, anchor into it nicely -----------
   local anchorParent = f.Inset or f
 
   -- Bucket slider ------------------------------------------------------------
@@ -228,19 +222,15 @@ function Opt:Create()
     :SetPoint("TOPLEFT", 20, -380)
 
   -- Visibility toggles -------------------------------------------------------
+  -- IMPORTANT: Do not touch Report parenting here (prevents drift).
   local visXP = makeCheck(anchorParent, "Show XP Frame", not AvgXPDB.mainHidden, function(v)
     AvgXPDB.mainHidden = not v
     if v then
       UI.back:Show()
+      -- Only the graph is parented inside the XP frame.
       Graph.frame:SetParent(UI.back)
-      if XPChronicle.Report.frame then
-        XPChronicle.Report.frame:SetParent(UI.back)
-      end
     else
       Graph.frame:SetParent(UIParent)
-      if XPChronicle.Report.frame then
-        XPChronicle.Report.frame:SetParent(UIParent)
-      end
       UI.back:Hide()
     end
   end)
