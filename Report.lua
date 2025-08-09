@@ -66,9 +66,6 @@ function Report:Create()
     eventsTab:SetScript("OnClick", function() self:ShowEventsTab() end)
     self.eventsTab = eventsTab
     
-    -- Report content - removed since we're not using a container
-    -- Just parent dropdown and scroll directly to the frame
-    
     -- Dropdown for report - matching LevelReport positioning but moved down for buttons
     local dd = CreateFrame("Frame", "XPChronicleReportDD", f, "UIDropDownMenuTemplate")
     dd:SetPoint("TOPLEFT", 10, -70)
@@ -155,18 +152,19 @@ function Report:AttachToCharacterFrame()
         CharacterFrame:HookScript("OnShow", function()
             if AvgXPDB.autoOpenReport then
                 self.frame:Show()
+                self:ShowReportTab()
                 self:Refresh()
             end
         end)
         
         CharacterFrame:HookScript("OnHide", function()
-            if AvgXPDB.autoOpenReport then
-                self.frame:Hide()
-            end
+            -- Always hide when character frame hides
+            self.frame:Hide()
         end)
         
         if CharacterFrame:IsShown() and AvgXPDB.autoOpenReport then
             self.frame:Show()
+            self:ShowReportTab()
             self:Refresh()
         end
     end
@@ -413,16 +411,51 @@ end
 
 function Report:Toggle()
     if not self.frame then self:Create() end
+    
+    -- Check if report is currently shown
     if self.frame:IsShown() then
+        -- Close the report
         self.frame:Hide()
+        
+        -- If we opened the character frame for this, close it too
+        if CharacterFrame and CharacterFrame:IsShown() and not AvgXPDB.autoOpenReport then
+            ToggleCharacter("PaperDollFrame")
+        end
     else
-        -- If not attached to character frame, show at center
-        if not self.frame:GetParent() or self.frame:GetParent() == UIParent then
+        -- Open the report
+        
+        -- First check if we need the character frame
+        if self.frame:GetParent() == CharacterFrame or not CharacterFrame then
+            -- We need the character frame, so open it
+            if not CharacterFrame or not CharacterFrame:IsShown() then
+                ToggleCharacter("PaperDollFrame")
+                -- The OnShow hook will handle showing the report if autoOpenReport is true
+                -- Otherwise we need to show it manually
+                if not AvgXPDB.autoOpenReport then
+                    -- Wait a frame for character panel to fully initialize
+                    C_Timer.After(0, function()
+                        if CharacterFrame and CharacterFrame:IsShown() then
+                            self.frame:Show()
+                            self:ShowReportTab()
+                            self:Refresh()
+                        end
+                    end)
+                end
+            else
+                -- Character frame already open, just show report
+                self.frame:Show()
+                self:ShowReportTab()
+                self:Refresh()
+            end
+        else
+            -- Not attached to character frame, show standalone
             self.frame:ClearAllPoints()
             self.frame:SetPoint("CENTER")
+            self.frame:SetParent(UIParent)
+            self.frame:Show()
+            self:ShowReportTab()
+            self:Refresh()
         end
-        self.frame:Show()
-        self:ShowReportTab()
     end
 end
 
