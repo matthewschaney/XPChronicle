@@ -196,13 +196,8 @@ end
 
 -- External API ---------------------------------------------------------------
 function UI:Refresh()
+  -- Only update the label text here; do NOT change panel size during refresh.
   self:UpdateLabel()
-  local NB = AvgXPDB.buckets or 12
-  local innerW = self:GetInnerWidth()
-  local barW = math.max(1, math.floor((innerW - (NB - 1)) / NB)) -- rough pass
-  local totW = barW * NB + (NB - 1)
-  self:SetUnifiedLayout(totW, 40)
-
   XPChronicle.Graph:Refresh()
 end
 
