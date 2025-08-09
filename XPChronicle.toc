@@ -1,6 +1,6 @@
-## Title: XPChronicle - |cffa335ee1.4.0|r
+## Title: XPChronicle |cffa335ee2.0.0|r
 ## Author: Matthew Schaney
-## Version: 1.4.0
+## Version: 2.0.0
 ## Notes: Records session & lifetime average XP/hr with detailed leveling reports.
 ## SavedVariablesPerCharacter: AvgXPDB
 ## Interface: 11507, 50500
