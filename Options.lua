@@ -1,4 +1,4 @@
--- XPChronicle ▸ Options.lua
+-- XPChronicle ▸ Options.lua (Updated)
 
 XPChronicle         = XPChronicle or {}
 XPChronicle.Options = XPChronicle.Options or {}
@@ -9,7 +9,7 @@ local DB, UI, Graph = XPChronicle.DB, XPChronicle.UI, XPChronicle.Graph
 local MB            = XPChronicle.MinimapButton
 
 -- Constants ------------------------------------------------------------------
-local PANEL_W, PANEL_H = 380, 665
+local PANEL_W, PANEL_H = 380, 700
 local TEX              = "Interface\\Buttons\\WHITE8x8"
 local TAG              = "|cff33ff99XPChronicle|r: "
 
@@ -49,6 +49,7 @@ function Opt:Create()
   f:SetBackdrop({ bgFile = TEX, edgeFile = TEX,
                   tile = false, edgeSize = 1 })
   f:SetBackdropColor(0, 0, 0, 0.75)
+  f:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
   f:SetMovable(true)
   f:EnableMouse(true)
   f:RegisterForDrag("LeftButton")
@@ -183,14 +184,14 @@ function Opt:Create()
   end)
   lockMain:SetPoint("TOPLEFT", 20, -235)
 
-  local lockHist = makeCheck(f, "Lock History Frame",
-                             AvgXPDB.historyLocked or false, function(v)
-    AvgXPDB.historyLocked = v
-    if XPChronicle.History.frame then
-      XPChronicle.History.frame:SetMovable(not v)
+  local lockReport = makeCheck(f, "Lock Report Frame",
+                               AvgXPDB.reportLocked or false, function(v)
+    AvgXPDB.reportLocked = v
+    if XPChronicle.Report.frame then
+      XPChronicle.Report.frame:SetMovable(not v)
     end
   end)
-  lockHist:SetPoint("TOPLEFT", 20, -260)
+  lockReport:SetPoint("TOPLEFT", 20, -260)
 
   local lockMini = makeCheck(f, "Lock Minimap Button",
                              AvgXPDB.minimapLocked or false,
@@ -231,23 +232,13 @@ function Opt:Create()
     AvgXPDB.predictionMode = v
     Graph:BuildBars()
     Graph:Refresh()
-    local need = v and (not AvgXPDB.histHidden)
-    if XPChronicle.History.frame
-       and XPChronicle.History.frame:IsShown() ~= need then
-      XPChronicle.History:Toggle()
-    end
   end):SetPoint("TOPLEFT", 230, -355)
 
-  -- store the checkbox so History.lua can sync its state
-  Opt.histChk = makeCheck(f, "Show History Frame",
-                          not AvgXPDB.histHidden, function(v)
-    AvgXPDB.histHidden = not v
-    if not XPChronicle.History.frame then XPChronicle.History:Create() end
-    local shown = XPChronicle.History.frame:IsShown()
-    if v  and not shown then XPChronicle.History:Toggle() end
-    if not v and     shown then XPChronicle.History:Toggle() end
-  end)
-  Opt.histChk:SetPoint("TOPLEFT", 20, -380)
+  -- Auto-open report with C checkbox
+  makeCheck(f, "Auto-open Report with Character Panel (C)",
+            AvgXPDB.autoOpenReport or false,
+            function(v) AvgXPDB.autoOpenReport = v end)
+    :SetPoint("TOPLEFT", 20, -380)
 
   -- Visibility toggles -------------------------------------------------------
 
@@ -256,13 +247,13 @@ function Opt:Create()
     if v then
       UI.back:Show()
       Graph.frame:SetParent(UI.back)
-      if XPChronicle.History.frame then
-        XPChronicle.History.frame:SetParent(UI.back)
+      if XPChronicle.Report.frame then
+        XPChronicle.Report.frame:SetParent(UI.back)
       end
     else
       Graph.frame:SetParent(UIParent)
-      if XPChronicle.History.frame then
-        XPChronicle.History.frame:SetParent(UIParent)
+      if XPChronicle.Report.frame then
+        XPChronicle.Report.frame:SetParent(UIParent)
       end
       UI.back:Hide()
     end
@@ -332,3 +323,4 @@ function Opt:Toggle()
   if not self.frame then self:Create() end
   self.frame:SetShown(not self.frame:IsShown())
 end
+

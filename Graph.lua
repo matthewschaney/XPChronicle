@@ -12,7 +12,7 @@ local BAR_H = 40                      -- Height of every bar
 local GAP   = 1                       -- One‑pixel gap between bars
 local BLUE  = { 0.2, 0.8, 1 }         -- Default history colour
 local RED   = { 1,   0.2, 0.2 }       -- Default prediction colour
-local BK    = { 0,   0,   0, 0.6 }    -- 60 % black backdrop
+local BK    = { 0,   0,   0, 0.6 }    -- 60 % black backdrop
 local TEX   = "Interface\\Buttons\\WHITE8x8"
 
 -- Colour helpers -------------------------------------------------------------

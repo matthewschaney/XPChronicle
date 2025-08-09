@@ -1,4 +1,4 @@
--- XPChronicle ▸ UI.lua
+-- XPChronicle ▸ UI.lua (Updated)
 
 XPChronicle          = XPChronicle or {}
 XPChronicle.UI       = {}
@@ -45,6 +45,14 @@ local function InitMainMenu()
       AvgXPDB.predictionMode = not AvgXPDB.predictionMode
       XPChronicle.Graph:BuildBars()
       XPChronicle.Graph:Refresh()
+    end
+    UIDropDownMenu_AddButton(info, level)
+    
+    -- Open XP Report ---------------------------------------------------------
+    info           = UIDropDownMenu_CreateInfo()
+    info.text      = "Open XP Report"
+    info.func      = function()
+      XPChronicle.Report:Toggle()
     end
     UIDropDownMenu_AddButton(info, level)
   end)

@@ -1,4 +1,4 @@
--- XPChronicle ▸ MinimapButton.lua
+-- XPChronicle ▸ MinimapButton.lua (Updated)
 
 XPChronicle                = XPChronicle or {}
 XPChronicle.MinimapButton   = {}
@@ -80,10 +80,10 @@ function MB:Create()
   b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
   b:SetClampedToScreen(true)
 
-  -- Click behaviour (L: History, R: Options).
+  -- Click behaviour (L: Report, R: Options).
   b:SetScript("OnClick", function(_, btn)
     if btn == "LeftButton" then
-      XPChronicle.History:Toggle()
+      XPChronicle.Report:Toggle()
     else -- RightButton
       XPChronicle.Options:Toggle()
     end
@@ -103,8 +103,8 @@ function MB:Create()
   b:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_LEFT")
     GameTooltip:AddLine("XPChronicle", .2, .8, 1)
-    GameTooltip:AddLine("Left-click: History", 1, 1, 1)
-    GameTooltip:AddLine("Right-click: Toggle Graph", 1, 1, 1)
+    GameTooltip:AddLine("Left-click: Open Report", 1, 1, 1)
+    GameTooltip:AddLine("Right-click: Options", 1, 1, 1)
     GameTooltip:AddLine("Drag: Reposition", 1, 1, 1)
     GameTooltip:Show()
   end)
