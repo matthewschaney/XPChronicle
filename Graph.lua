@@ -15,12 +15,8 @@ local RED   = { 1,   0.2, 0.2 }       -- Default prediction colour
 local TEX   = "Interface\\Buttons\\WHITE8x8"
 
 -- Colour helpers -------------------------------------------------------------
-local function histCol()
-  return AvgXPDB and AvgXPDB.barColor or BLUE
-end
-local function predCol()
-  return AvgXPDB and AvgXPDB.predColor or RED
-end
+local function histCol() return (AvgXPDB and AvgXPDB.barColor) or BLUE end
+local function predCol() return (AvgXPDB and AvgXPDB.predColor) or RED end
 
 -- Helpers --------------------------------------------------------------------
 local function makeBar(parent, w, h, col)
@@ -28,9 +24,7 @@ local function makeBar(parent, w, h, col)
   b:SetSize(w, h)
   b:SetOrientation("VERTICAL")
 
-  -- Modern look: smooth status texture with subtle border/shadow
-  local tex = "Interface\\TARGETINGFRAME\\UI-StatusBar"
-  b:SetStatusBarTexture(tex)
+  b:SetStatusBarTexture("Interface\\TARGETINGFRAME\\UI-StatusBar")
   b:SetStatusBarColor(col[1], col[2], col[3])
 
   b:SetBackdrop({
@@ -39,10 +33,9 @@ local function makeBar(parent, w, h, col)
     edgeSize = 8,
     insets   = { left = 2, right = 2, top = 2, bottom = 2 }
   })
-  b:SetBackdropColor(0, 0, 0, 0.20) -- light inner shading
+  b:SetBackdropColor(0, 0, 0, 0.20)
   b:SetBackdropBorderColor(col[1] * 0.7, col[2] * 0.7, col[3] * 0.7, 0.85)
 
-  -- Soft highlight on top half for “glass” feel
   local shine = b:CreateTexture(nil, "OVERLAY")
   shine:SetPoint("TOPLEFT", 3, -3)
   shine:SetPoint("TOPRIGHT", -3, -3)
@@ -58,16 +51,22 @@ local function tip(frame, label, value, isPred)
   frame:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
     GameTooltip:AddLine(label)
-    GameTooltip:AddLine(value,
-      isPred and 1 or .2, isPred and .2 or .8, isPred and .2 or 1)
+    GameTooltip:AddLine(value, isPred and 1 or .2, isPred and .2 or .8, isPred and .2 or 1)
     GameTooltip:Show()
   end)
   frame:SetScript("OnLeave", GameTooltip_Hide)
 end
 
+-- Smart label cadence based on bar width ------------------------------------
+local function computeLabelSkip(barW)
+  if barW >= 18 then return 1
+  elseif barW >= 12 then return 2
+  elseif barW >= 9 then return 3
+  else return math.huge end -- hide all
+end
+
 -- Init -----------------------------------------------------------------------
 function Graph:Init()
-  -- Graph is a child inside the unified UI.back panel
   local g = _G.XPChronicleGraph
          or CreateFrame("Frame", "XPChronicleGraph", UI.back, "BackdropTemplate")
   self.frame = g
@@ -77,24 +76,30 @@ function Graph:Init()
   g:SetPoint("BOTTOMRIGHT", UI.back, "BOTTOMRIGHT", -UI.PAD, UI.PAD)
   g:SetHeight(BAR_H)
 
-  -- Unified background lives on UI.back
-  if self.backdrop then
-    self.backdrop:Hide()
-    self.backdrop = nil
-  end
+  if self.backdrop then self.backdrop:Hide(); self.backdrop = nil end
 end
 
 -- BuildBars ------------------------------------------------------------------
 function Graph:BuildBars()
   self:Init()
 
-  local NB      = AvgXPDB.buckets
-  local INNER_W = UI:GetInnerWidth()
+  local NB = AvgXPDB.buckets
+  -- Ensure a minimum per-bar width by allowing the panel to get wider.
+  local currentInner = UI:GetInnerWidth()
+  local desiredInner = math.max(currentInner, NB * UI.MIN_BAR_W + (NB - 1) * GAP)
+
+  -- First, size the panel (animated) to fit desired inner width.
+  UI:SetUnifiedLayout(desiredInner, BAR_H, true)
+
+  -- Recalculate using the (possibly new) inner width after panel resize target set
+  local INNER_W = UI.PANEL_W - (UI.PAD * 2)
   local BAR_W   = math.max(1, math.floor((INNER_W - (NB - 1) * GAP) / NB))
   local TOT_W   = BAR_W * NB + GAP * (NB - 1)
 
-  -- Resize the unified panel around content (label + graph)
-  UI:SetUnifiedLayout(TOT_W, BAR_H)
+  -- Snap final target (tiny correction) with no animation if nearly equal
+  if math.abs((UI.PANEL_W - UI.PAD * 2) - TOT_W) > 0.5 then
+    UI:SetUnifiedLayout(TOT_W, BAR_H, false)
+  end
 
   -- Re-anchor (panel size may have changed)
   self.frame:ClearAllPoints()
@@ -102,31 +107,45 @@ function Graph:BuildBars()
   self.frame:SetPoint("BOTTOMRIGHT", UI.back, "BOTTOMRIGHT", -UI.PAD, UI.PAD)
   self.frame:SetHeight(BAR_H)
 
-  self.bars, self.redBars, self.texts = self.bars or {}, self.redBars or {},
-                                        self.texts or {}
+  self.bars, self.redBars, self.texts = self.bars or {}, self.redBars or {}, self.texts or {}
 
-  -- Cleanup extra widgets if bucket count shrank
+  -- Remove extras if bucket count shrank
   for i = #self.bars, NB + 1, -1 do
     self.bars[i]:Hide();    self.bars[i]    = nil
     self.redBars[i]:Hide(); self.redBars[i] = nil
     self.texts[i]:Hide();   self.texts[i]   = nil
   end
-  -- Hide existing before re-laying out
   for _, tbl in ipairs { self.bars, self.redBars, self.texts } do
     for _, w in ipairs(tbl) do w:Hide() end
   end
+
+  -- Visual simplification when bars get narrow
+  local narrow = (BAR_W < 10)
 
   for i = 1, NB do
     if not self.bars[i] then
       self.bars[i]    = makeBar(self.frame, BAR_W, BAR_H, histCol())
       self.redBars[i] = makeBar(self.frame, BAR_W, BAR_H, predCol())
-
       self.texts[i]   = self.frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
       self.texts[i]:SetJustifyH("CENTER")
       self.texts[i]:SetAlpha(0.85)
     else
       self.bars[i]:SetSize(BAR_W, BAR_H)
       self.redBars[i]:SetSize(BAR_W, BAR_H)
+    end
+
+    -- De-clutter at high density
+    if narrow then
+      self.bars[i]:SetBackdropBorderColor(0,0,0,0)
+      self.redBars[i]:SetBackdropBorderColor(0,0,0,0)
+      if self.bars[i]._shine then self.bars[i]._shine:Hide() end
+      if self.redBars[i]._shine then self.redBars[i]._shine:Hide() end
+    else
+      local hc, pc = histCol(), predCol()
+      self.bars[i]:SetBackdropBorderColor(hc[1]*0.7, hc[2]*0.7, hc[3]*0.7, 0.85)
+      self.redBars[i]:SetBackdropBorderColor(pc[1]*0.7, pc[2]*0.7, pc[3]*0.7, 0.85)
+      if self.bars[i]._shine then self.bars[i]._shine:Show() end
+      if self.redBars[i]._shine then self.redBars[i]._shine:Show() end
     end
 
     local x = (i - 1) * (BAR_W + GAP)
@@ -138,6 +157,7 @@ function Graph:BuildBars()
   end
 
   self.barWCache = BAR_W
+  self.labelSkip = computeLabelSkip(BAR_W)
   self:Refresh()
 end
 
@@ -148,6 +168,8 @@ function Graph:Refresh()
 
   if not self.lastIx or self.lastIx ~= lastIx or #self.bars ~= NB then
     self.lastIx = lastIx; return self:BuildBars() end
+
+  local skip = self.labelSkip or computeLabelSkip(self.barWCache or 10)
 
   -- History mode -------------------------------------------------------------
   if not AvgXPDB.predictionMode then
@@ -160,8 +182,10 @@ function Graph:Refresh()
       b:SetValue(xp)
       b:GetStatusBarTexture():SetVertexColor(unpack(histCol()))
       self.redBars[i]:Hide()
-      local lblOk = self.barWCache >= 14
-      self.texts[i]:SetText(lblOk and date("%H:%M", starts[idx]) or "")
+
+      local showLabel = (skip ~= math.huge) and ((i % skip) == 1)
+      self.texts[i]:SetText(showLabel and date("%H:%M", starts[idx]) or "")
+
       tip(b, date("%H:%M", starts[idx]), ("%d XP"):format(xp))
     end
     return
@@ -185,8 +209,10 @@ function Graph:Refresh()
     b:SetValue(xp)
     b:GetStatusBarTexture():SetVertexColor(unpack(histCol()))
     self.redBars[i]:Hide()
-    local lblOk = self.barWCache >= 14
-    self.texts[i]:SetText(lblOk and date("%H:%M", starts[idx]) or "")
+
+    local showLabel = (skip ~= math.huge) and ((i % skip) == 1)
+    self.texts[i]:SetText(showLabel and date("%H:%M", starts[idx]) or "")
+
     tip(b, date("%H:%M", starts[idx]), ("%d XP"):format(xp))
   end
 
@@ -205,9 +231,11 @@ function Graph:Refresh()
     r:SetMinMaxValues(0, maxR)
     r:SetValue(gain)
     r:GetStatusBarTexture():SetVertexColor(unpack(predCol()))
+
     local lbl   = date("%H:%M", starts[lastIx] + j * 3600)
-    local lblOk = self.barWCache >= 14
-    self.texts[i]:SetText(lblOk and lbl or "")
+    local showLabel = (skip ~= math.huge) and ((i % skip) == 1)
+    self.texts[i]:SetText(showLabel and lbl or "")
+
     if gain > 0 then tip(r, lbl, ("%d XP predicted"):format(gain), true)
                   else r:SetScript("OnEnter", nil); r:SetScript("OnLeave", nil) end
   end
