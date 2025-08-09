@@ -4,6 +4,10 @@ XPChronicle = XPChronicle or {}
 XPChronicle.Report = XPChronicle.Report or {}
 local Report = XPChronicle.Report
 
+-- Visual size for the dropdown menu relative to the dropdown control
+-- 0.5 = half the size of your Report frame/dropdown.
+local MENU_RELATIVE_SCALE = 0.5
+
 -- Helper functions
 local function secondsToClock(s)
     local h = math.floor((s or 0)/3600)
@@ -21,8 +25,9 @@ end
 -- Create main frame
 function Report:Create()
     if self.frame then return end
-    
+
     -- Initialize report data if needed
+    AvgXPDB = AvgXPDB or {}
     AvgXPDB.report = AvgXPDB.report or {
         levels = {},
         overall = {
@@ -34,23 +39,23 @@ function Report:Create()
         },
         meta = {}
     }
-    
+
     -- Main frame using Blizzard template
     local f = CreateFrame("Frame", "XPChronicleReportFrame", UIParent, "BasicFrameTemplateWithInset")
     self.frame = f
     f:SetSize(300, 420)
     f:SetPoint("CENTER")
     f:Hide()
-    
+
     -- NOT movable - this is the key difference
     f:SetMovable(false)
     f:EnableMouse(true)
-    
+
     -- Title
     f.title = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     f.title:SetPoint("TOP", 0, -8)
     f.title:SetText("XPChronicle Leveling Report")
-    
+
     -- Create tab buttons
     local reportTab = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     reportTab:SetSize(80, 22)
@@ -58,43 +63,47 @@ function Report:Create()
     reportTab:SetText("Report")
     reportTab:SetScript("OnClick", function() self:ShowReportTab() end)
     self.reportTab = reportTab
-    
+
     local eventsTab = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     eventsTab:SetSize(80, 22)
     eventsTab:SetPoint("LEFT", reportTab, "RIGHT", 5, 0)
     eventsTab:SetText("Events")
     eventsTab:SetScript("OnClick", function() self:ShowEventsTab() end)
     self.eventsTab = eventsTab
-    
+
     -- Dropdown for report - matching LevelReport positioning but moved down for buttons
     local dd = CreateFrame("Frame", "XPChronicleReportDD", f, "UIDropDownMenuTemplate")
     dd:SetPoint("TOPLEFT", 10, -70)
     self.dd = dd
     self.currentSelection = "overall"
-    
+
+    -- Anchor menu directly under the control; keep strata high
+    UIDropDownMenu_SetAnchor(dd, 0, 0, "TOPLEFT", dd, "BOTTOMLEFT")
+    dd:SetFrameStrata("DIALOG")
+
     -- Scroll frame for report - matching LevelReport positioning but moved down
     local reportScroll = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
     reportScroll:SetPoint("TOPLEFT", 22, -110)
     reportScroll:SetPoint("BOTTOMRIGHT", -30, 14)
     self.reportScroll = reportScroll
-    
+
     local reportScrollContent = CreateFrame("Frame", nil, reportScroll)
     reportScrollContent:SetSize(1, 1)
     reportScroll:SetScrollChild(reportScrollContent)
-    
+
     local reportText = reportScrollContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     reportText:SetPoint("TOPLEFT")
     reportText:SetWidth(250)
     reportText:SetJustifyH("LEFT")
     self.reportText = reportText
-    
+
     -- Events content
     local eventsContent = CreateFrame("Frame", nil, f)
     eventsContent:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -70)
     eventsContent:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -10, 10)
     eventsContent:Hide()
     self.eventsContent = eventsContent
-    
+
     -- Mode buttons for events
     local eventModes = {}
     local modeNames = { "Event", "Hour", "Day" }
@@ -104,23 +113,23 @@ function Report:Create()
         b:SetSize(70, 22)
         b:SetPoint("TOPLEFT", 10 + (i - 1) * 75, 0)
         b:SetText(name)
-        b:SetScript("OnClick", function() 
+        b:SetScript("OnClick", function()
             AvgXPDB.historyMode = key
             self:UpdateEvents()
         end)
         eventModes[key] = b
     end
     self.eventModes = eventModes
-    
+
     -- Scroll frame for events
     local eventsScroll = CreateFrame("ScrollFrame", nil, eventsContent, "UIPanelScrollFrameTemplate")
     eventsScroll:SetPoint("TOPLEFT", 12, -30)
     eventsScroll:SetPoint("BOTTOMRIGHT", -20, 4)
-    
+
     local eventsScrollContent = CreateFrame("Frame", nil, eventsScroll)
     eventsScrollContent:SetSize(1, 1)
     eventsScroll:SetScrollChild(eventsScrollContent)
-    
+
     local eventsText = eventsScrollContent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     eventsText:SetPoint("TOPLEFT", 0, 0)
     eventsText:SetJustifyH("LEFT")
@@ -129,26 +138,69 @@ function Report:Create()
     eventsText:SetWidth(250)
     self.eventsText = eventsText
     self.eventsScrollContent = eventsScrollContent
-    
+
     -- Initialize dropdown
     self:InitializeDropDown()
-    
+
     -- Default to report tab
     self:ShowReportTab()
-    
+
     -- Hook to Character frame if needed
     self:AttachToCharacterFrame()
+
+    -- ----- Keep the popup menu aligned & scaled -----
+    local function FixDropDownListPosition(list)
+        if not list or not list.dropdown then return end
+        if list.dropdown ~= self.dd then return end
+
+        -- Scale the menu to a fraction of the dropdown’s effective scale
+        local ddScale = self.dd:GetEffectiveScale() or 1
+        local targetScale = ddScale * (MENU_RELATIVE_SCALE or 1)
+        if list:GetScale() ~= targetScale then
+            list:SetScale(targetScale)
+        end
+
+        -- Place the menu exactly under the dropdown using absolute screen coords
+        local x, y = self.dd:GetLeft(), self.dd:GetBottom()
+        if x and y then
+            list:ClearAllPoints()
+            list:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x, y)
+        else
+            -- Fallback: relative anchor (still OK if coords unavailable)
+            list:ClearAllPoints()
+            list:SetPoint("TOPLEFT", self.dd, "BOTTOMLEFT", 0, 0)
+        end
+        list:SetFrameStrata("TOOLTIP")
+    end
+
+    hooksecurefunc("ToggleDropDownMenu", function(level)
+        if level == 1 and DropDownList1 and DropDownList1.dropdown == self.dd then
+            FixDropDownListPosition(DropDownList1)
+        end
+    end)
+
+    if DropDownList1 then
+        DropDownList1:HookScript("OnShow", function(s) FixDropDownListPosition(s) end)
+    end
+    if DropDownList2 then
+        DropDownList2:HookScript("OnShow", function(s) FixDropDownListPosition(s) end)
+    end
 end
 
 function Report:AttachToCharacterFrame()
     local function DoAttach()
         if not CharacterFrame then return end
-        
+
         self.frame:ClearAllPoints()
         self.frame:SetPoint("TOPLEFT", CharacterFrame, "TOPRIGHT", -30, -15)
         self.frame:SetParent(CharacterFrame)
         self.frame:SetFrameLevel(CharacterFrame:GetFrameLevel() + 2)
-        
+
+        if self.dd then
+            self.dd:SetFrameLevel(self.frame:GetFrameLevel() + 1)
+            UIDropDownMenu_SetAnchor(self.dd, 0, 0, "TOPLEFT", self.dd, "BOTTOMLEFT")
+        end
+
         CharacterFrame:HookScript("OnShow", function()
             if AvgXPDB.autoOpenReport then
                 self.frame:Show()
@@ -156,19 +208,18 @@ function Report:AttachToCharacterFrame()
                 self:Refresh()
             end
         end)
-        
+
         CharacterFrame:HookScript("OnHide", function()
-            -- Always hide when character frame hides
             self.frame:Hide()
         end)
-        
+
         if CharacterFrame:IsShown() and AvgXPDB.autoOpenReport then
             self.frame:Show()
             self:ShowReportTab()
             self:Refresh()
         end
     end
-    
+
     if CharacterFrame then
         DoAttach()
     else
@@ -199,16 +250,16 @@ function Report:InitializeDropDown()
         end)
         return choices
     end
-    
-    local function InitDD(self, level)
+
+    local function InitDD(_, level)
         local function OnClick(button)
             Report.currentSelection = button.value
             UIDropDownMenu_SetSelectedValue(Report.dd, button.value)
             Report:RenderReport(button.value)
         end
-        
+
         if level and level > 1 then return end
-        
+
         local info
         local choices = buildChoices()
         for _, c in ipairs(choices) do
@@ -220,40 +271,32 @@ function Report:InitializeDropDown()
             UIDropDownMenu_AddButton(info, level or 1)
         end
     end
-    
+
+    self._InitDD = InitDD
+
     UIDropDownMenu_SetWidth(self.dd, 170)
-    UIDropDownMenu_Initialize(self.dd, InitDD)
+    UIDropDownMenu_Initialize(self.dd, self._InitDD)
     UIDropDownMenu_SetSelectedValue(self.dd, self.currentSelection)
     UIDropDownMenu_SetText(self.dd, "Overall")
+
+    UIDropDownMenu_SetAnchor(self.dd, 0, 0, "TOPLEFT", self.dd, "BOTTOMLEFT")
 end
 
 function Report:ShowReportTab()
-    -- Hide events content completely
     self.eventsContent:Hide()
-    
-    -- Show report elements
     self.dd:Show()
     self.reportScroll:Show()
-    
-    -- Update button states
     self.reportTab:Disable()
     self.eventsTab:Enable()
-    
     self:RenderReport(self.currentSelection)
 end
 
 function Report:ShowEventsTab()
-    -- Hide report elements completely
     self.dd:Hide()
     self.reportScroll:Hide()
-    
-    -- Show events content
     self.eventsContent:Show()
-    
-    -- Update button states
     self.eventsTab:Disable()
     self.reportTab:Enable()
-    
     self:UpdateEvents()
 end
 
@@ -262,7 +305,7 @@ function Report:RenderReport(key)
         self.reportText:SetText("|cffff8080No data available yet.|r\n\nStart playing to track your leveling!")
         return
     end
-    
+
     local L, isOverall
     if key == "overall" then
         L = AvgXPDB.report.overall
@@ -270,12 +313,12 @@ function Report:RenderReport(key)
     else
         L = (AvgXPDB.report.levels or {})[tonumber(key or 0)]
     end
-    
+
     if not L then
         self.reportText:SetText("|cffff8080No data for this level.|r")
         return
     end
-    
+
     local zones = {}
     for zn, s in pairs(L.zones or {}) do
         if zn and zn ~= "" and zn ~= "Unknown" then
@@ -283,14 +326,14 @@ function Report:RenderReport(key)
         end
     end
     table.sort(zones, function(a, b) return a.s > b.s end)
-    
+
     local zoneTotal = 0
     for _, z in ipairs(zones) do
         zoneTotal = zoneTotal + (z.s or 0)
     end
-    
+
     local lines = {}
-    
+
     if isOverall then
         table.insert(lines, "|cffffff00Overall Statistics|r")
     else
@@ -302,9 +345,9 @@ function Report:RenderReport(key)
             table.insert(lines, ("Completed: |cffaaaaaa%s|r"):format(date("%b %d, %Y %H:%M", L.endedAt)))
         end
     end
-    
+
     table.insert(lines, ("Time spent: |cffffffff%s|r"):format(secondsToClock(math.floor(L.seconds or 0))))
-    
+
     table.insert(lines, "\n|cffffff00Zones & Dungeons|r")
     if #zones == 0 or zoneTotal <= 0 then
         table.insert(lines, "• |cff888888(no zone time recorded)|r")
@@ -317,12 +360,12 @@ function Report:RenderReport(key)
             table.insert(lines, ("• |cff888888... and %d more zones|r"):format(#zones - 6))
         end
     end
-    
+
     local q = (L.xp and L.xp.quest) or 0
     local k = (L.xp and L.xp.kill) or 0
     local o = (L.xp and L.xp.other) or 0
     local totalXP = q + k + o
-    
+
     table.insert(lines, "\n|cffffff00Experience Sources|r")
     if totalXP > 0 then
         table.insert(lines, ("• Quests: |cff00ff00%.1f%%|r |cffaaaaaa(%s)|r"):format(pct(q, totalXP), BreakUpLargeNumbers(q)))
@@ -333,11 +376,11 @@ function Report:RenderReport(key)
     else
         table.insert(lines, "• |cff888888(no experience tracked yet)|r")
     end
-    
+
     local solo = (L.time and L.time.solo) or 0
     local group = (L.time and L.time.group) or 0
     local totT = solo + group
-    
+
     table.insert(lines, "\n|cffffff00Play Style|r")
     if totT > 0 then
         table.insert(lines, ("• Solo: |cff00ff00%.1f%%|r"):format(pct(solo, totT)))
@@ -345,21 +388,21 @@ function Report:RenderReport(key)
     else
         table.insert(lines, "• |cff888888(no time tracked yet)|r")
     end
-    
+
     table.insert(lines, "\n|cffffff00Other Stats|r")
     table.insert(lines, ("• Deaths: |cffff0000%d|r"):format(L.deaths or 0))
-    
+
     self.reportText:SetText(table.concat(lines, "\n"))
 end
 
 function Report:UpdateEvents()
     local mode = AvgXPDB.historyMode or "hour"
-    
+
     -- Highlight active button
     for m, btn in pairs(self.eventModes) do
         btn:SetEnabled(m ~= mode)
     end
-    
+
     -- Build text lines
     local lines = {}
     if mode == "event" then
@@ -404,35 +447,24 @@ function Report:UpdateEvents()
             table.insert(lines, ("%s: +%d XP"):format(day, totals[day]))
         end
     end
-    
+
     self.eventsText:SetText(table.concat(lines, "\n"))
     self.eventsScrollContent:SetHeight(#lines * 14)
 end
 
 function Report:Toggle()
     if not self.frame then self:Create() end
-    
-    -- Check if report is currently shown
+
     if self.frame:IsShown() then
-        -- Close the report
         self.frame:Hide()
-        
-        -- If we opened the character frame for this, close it too
         if CharacterFrame and CharacterFrame:IsShown() and not AvgXPDB.autoOpenReport then
             ToggleCharacter("PaperDollFrame")
         end
     else
-        -- Open the report
-        
-        -- First check if we need the character frame
         if self.frame:GetParent() == CharacterFrame or not CharacterFrame then
-            -- We need the character frame, so open it
             if not CharacterFrame or not CharacterFrame:IsShown() then
                 ToggleCharacter("PaperDollFrame")
-                -- The OnShow hook will handle showing the report if autoOpenReport is true
-                -- Otherwise we need to show it manually
                 if not AvgXPDB.autoOpenReport then
-                    -- Wait a frame for character panel to fully initialize
                     C_Timer.After(0, function()
                         if CharacterFrame and CharacterFrame:IsShown() then
                             self.frame:Show()
@@ -442,13 +474,11 @@ function Report:Toggle()
                     end)
                 end
             else
-                -- Character frame already open, just show report
                 self.frame:Show()
                 self:ShowReportTab()
                 self:Refresh()
             end
         else
-            -- Not attached to character frame, show standalone
             self.frame:ClearAllPoints()
             self.frame:SetPoint("CENTER")
             self.frame:SetParent(UIParent)
@@ -461,10 +491,13 @@ end
 
 function Report:Refresh()
     if not self.frame or not self.frame:IsShown() then return end
-    
-    UIDropDownMenu_Initialize(self.dd, self.InitializeDropDown)
-    
-    -- Build choices locally since it's not accessible from InitializeDropDown
+
+    if self._InitDD then
+        UIDropDownMenu_Initialize(self.dd, self._InitDD)
+    else
+        self:InitializeDropDown()
+    end
+
     local choices = {}
     table.insert(choices, { text = "Overall", value = "overall" })
     if AvgXPDB.report and AvgXPDB.report.levels then
@@ -477,14 +510,16 @@ function Report:Refresh()
         if b.value == "overall" then return false end
         return (tonumber(a.value) or 0) < (tonumber(b.value) or 0)
     end)
-    
+
     for _, c in ipairs(choices) do
         if c.value == self.currentSelection then
             UIDropDownMenu_SetText(self.dd, c.text)
             break
         end
     end
-    
+
+    UIDropDownMenu_SetAnchor(self.dd, 0, 0, "TOPLEFT", self.dd, "BOTTOMLEFT")
+
     if self.reportScroll:IsShown() then
         self:RenderReport(self.currentSelection)
     else
