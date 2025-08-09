@@ -49,7 +49,7 @@ function Report:Create()
     -- Title
     f.title = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     f.title:SetPoint("TOP", 0, -8)
-    f.title:SetText("XPChronicle")
+    f.title:SetText("XPChronicle Leveling Report")
     
     -- Create tab buttons
     local reportTab = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
