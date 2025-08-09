@@ -6,6 +6,30 @@ local H               = XPChronicle.History
 local UI              = XPChronicle.UI
 local DB              = XPChronicle.DB
 
+local PURPLE          = "|cffa335ee"
+
+-- difficulty color helpers ---------------------------------------------------
+local COLORS = {
+  RED    = "|cffff2020",
+  ORANGE = "|cffff8040",
+  YELLOW = "|cffffff00",
+  GREEN  = "|cff40c040",
+  GRAY   = "|cff808080",
+}
+local function difficultyColor(diff)
+  if diff >= 5 then return COLORS.RED
+  elseif diff >= 3 then return COLORS.ORANGE
+  elseif diff >= -2 then return COLORS.YELLOW
+  elseif diff >= -4 then return COLORS.GREEN
+  else return COLORS.GRAY end
+end
+local function colorMob(ev)
+  if not ev.mobName or not ev.mobLevel or not ev.playerLevel then return ev.mobName end
+  local diff = (ev.mobLevel or 0) - (ev.playerLevel or 0)
+  local c = difficultyColor(diff)
+  return string.format("%s%s|r", c, ev.mobName)
+end
+
 -- Lock menu ------------------------------------------------------------------
 local function InitLockMenu()
   if H.lockMenu then return end
@@ -27,11 +51,8 @@ end
 -- Frame setup ----------------------------------------------------------------
 function H:Create()
   if self.frame then return end
-
-  -- Frame shell --------------------------------------------------------------
   local parent = UI.back:IsShown() and UI.back or UIParent
-  local f = CreateFrame("Frame", "XPChronicleHistoryFrame",
-                        parent, "BackdropTemplate")
+  local f = CreateFrame("Frame", "XPChronicleHistoryFrame", parent, "BackdropTemplate")
   self.frame = f
   f:SetSize(300, 400)
   f:SetBackdrop({
@@ -41,7 +62,6 @@ function H:Create()
     insets   = { left = 5, right = 5, top = 5, bottom = 5 },
   })
 
-  -- Positioning --------------------------------------------------------------
   if AvgXPDB.historyPos then
     f:SetPoint(AvgXPDB.historyPos.point, UIParent,
                AvgXPDB.historyPos.relativePoint,
@@ -50,7 +70,6 @@ function H:Create()
     f:SetPoint("CENTER")
   end
 
-  -- Drag & lock --------------------------------------------------------------
   f:EnableMouse(true)
   f:RegisterForDrag("LeftButton")
   f:SetMovable(not AvgXPDB.historyLocked)
@@ -65,18 +84,15 @@ function H:Create()
     end
   end)
 
-  -- Lock menu ----------------------------------------------------------------
   InitLockMenu()
   f:SetScript("OnMouseUp", function(_, btn)
     if btn == "RightButton" then ToggleDropDownMenu(1, nil, H.lockMenu, "cursor") end
   end)
 
-  -- Title --------------------------------------------------------------------
   local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
   title:SetPoint("TOP", 0, -10)
   title:SetText("XPChronicle History")
 
-  -- Mode buttons -------------------------------------------------------------
   self.modes = {}
   for i, name in ipairs({ "Event", "Hour", "Day" }) do
     local key = name:lower()
@@ -88,7 +104,6 @@ function H:Create()
     self.modes[key] = b
   end
 
-  -- Scroll area --------------------------------------------------------------
   local scroll = CreateFrame("ScrollFrame", "XPChronicleHistoryScrollFrame",
                              f, "UIPanelScrollFrameTemplate")
   scroll:SetPoint("TOPLEFT", 20, -60)
@@ -113,26 +128,23 @@ end
 -- Public API -----------------------------------------------------------------
 function H:Toggle()
   if not self.frame then self:Create() end
-   local willShow
-   if self.frame:IsShown() then
-     self.frame:Hide();  willShow = false
-   else
-     self:Update();     self.frame:Show();  willShow = true
-   end
-   AvgXPDB.histHidden = not willShow
-   if XPChronicle.Options and XPChronicle.Options.histChk then
-     XPChronicle.Options.histChk:SetChecked(willShow)
-   end
+  local willShow
+  if self.frame:IsShown() then
+    self.frame:Hide();  willShow = false
+  else
+    self:Update();      self.frame:Show();  willShow = true
+  end
+  AvgXPDB.histHidden = not willShow
+  if XPChronicle.Options and XPChronicle.Options.histChk then
+    XPChronicle.Options.histChk:SetChecked(willShow)
+  end
 end
 
 function H:Update()
   if not self.frame then return end
-
-  -- Highlight active button --------------------------------------------------
   local mode = AvgXPDB.historyMode or "hour"
   for m, btn in pairs(self.modes) do btn:SetEnabled(m ~= mode) end
 
-  -- Build text lines ---------------------------------------------------------
   local lines = {}
   if mode == "event" then
     local byDay = {}
@@ -140,44 +152,53 @@ function H:Update()
       byDay[ev.day] = byDay[ev.day] or {}
       table.insert(byDay[ev.day], ev)
     end
-    local keys = {}
-    for d in pairs(byDay) do table.insert(keys, d) end
-    table.sort(keys, function(a, b) return a > b end)
+    local keys = {}; for d in pairs(byDay) do table.insert(keys, d) end
+    table.sort(keys, function(a,b) return a>b end)
     for _, day in ipairs(keys) do
       table.insert(lines, day)
-      table.sort(byDay[day], function(a, b) return a.time < b.time end)
+      table.sort(byDay[day], function(a,b) return a.time < b.time end)
       for _, ev in ipairs(byDay[day]) do
-        table.insert(lines, ("  [%s] +%d XP"):format(ev.time, ev.xp))
+        local detail
+        if ev.kind == "quest" then
+          local q = ev.desc or "Quest"
+          detail = (" — \"%s%s|r\""):format(COLORS.YELLOW, q) -- color quest title
+        elseif ev.kind == "discover" then
+          local place = ev.desc or "Discovery"
+          detail = (" — \"%s\""):format(place)
+        elseif ev.kind == "kill" and ev.mobName then
+          detail = (" — Killed %s"):format(colorMob(ev))
+        else
+          detail = ev.desc and (" — %s"):format(ev.desc) or ""
+        end
+        table.insert(lines, ("  [%s] %s+%d XP|r%s"):format(ev.time, PURPLE, ev.xp, detail))
       end
       table.insert(lines, "")
     end
   elseif mode == "hour" then
     local hist, days = AvgXPDB.history or {}, {}
     for d in pairs(hist) do table.insert(days, d) end
-    table.sort(days, function(a, b) return a > b end)
+    table.sort(days, function(a,b) return a>b end)
     for _, day in ipairs(days) do
       table.insert(lines, day)
-      local hrs = {}
-      for hr in pairs(hist[day]) do table.insert(hrs, hr) end
+      local hrs = {}; for hr in pairs(hist[day]) do table.insert(hrs, hr) end
       table.sort(hrs)
       for _, hr in ipairs(hrs) do
-        table.insert(lines, ("  [%s] +%d XP"):format(hr, hist[day][hr]))
+        table.insert(lines, ("  [%s] %s+%d XP|r"):format(hr, PURPLE, hist[day][hr]))
       end
       table.insert(lines, "")
     end
-  else -- day
+  else
     local totals, days = {}, {}
     for _, ev in ipairs(AvgXPDB.historyEvents or {}) do
       totals[ev.day] = (totals[ev.day] or 0) + ev.xp
     end
     for d in pairs(totals) do table.insert(days, d) end
-    table.sort(days, function(a, b) return a > b end)
+    table.sort(days, function(a,b) return a>b end)
     for _, day in ipairs(days) do
-      table.insert(lines, ("%s: +%d XP"):format(day, totals[day]))
+      table.insert(lines, ("%s: %s+%d XP|r"):format(day, PURPLE, totals[day]))
     end
   end
 
-  -- Push to fontstring -------------------------------------------------------
   self.textFS:SetText(table.concat(lines, "\n"))
   self.content:SetHeight(#lines * 14)
 end

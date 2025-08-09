@@ -10,14 +10,28 @@ local REFRESH_SECS = 1     -- OnUpdate cadence.
 
 -- Utility helpers ------------------------------------------------------------
 local function now() return time() end
+local GetTime = GetTime
 
---- Ensure `tbl[key]` is non‑nil; return the final value.
 local function ensure(tbl, key, default)
   if tbl[key] == nil then tbl[key] = default end
   return tbl[key]
 end
 
--- 1) Migrate legacy (.ts‑less) events ----------------------------------------
+local function isNear(a, b, sec)
+  return math.abs((a.ts or 0) - (b.ts or 0)) <= (sec or 2)
+end
+
+-- Priority table for deciding which event to keep
+local PRIORITY = { generic = 1, kill = 2, discover = 3, quest = 4 }
+
+local function shouldReplace(oldEv, newEv)
+  if not oldEv then return false end
+  if oldEv.xp ~= newEv.xp then return false end
+  if not isNear(oldEv, newEv, 3) then return false end
+  return (PRIORITY[newEv.kind] or 0) > (PRIORITY[oldEv.kind] or 0)
+end
+
+-- 1) Migrate legacy (.ts-less) events ----------------------------------------
 function DB:MigrateOldEvents()
   local match = string.match
   for _, ev in ipairs(AvgXPDB.historyEvents or {}) do
@@ -40,40 +54,36 @@ end
 function DB:Init()
   AvgXPDB = (type(AvgXPDB) == "table") and AvgXPDB or {}
 
-  -- Scalars & toggles --------------------------------------------------------
   ensure(AvgXPDB, "totalXP",        0)
   ensure(AvgXPDB, "totalTime",      0)
   ensure(AvgXPDB, "buckets",        6)
   ensure(AvgXPDB, "graphHidden",    false)
   ensure(AvgXPDB, "historyMode",    "hour")
   ensure(AvgXPDB, "mainLocked",     false)
-  ensure(AvgXPDB, "historyLocked",  false)
+  ensure(AvgXPDB, "reportLocked",   false)
   ensure(AvgXPDB, "gridOffset",     0)
   ensure(AvgXPDB, "predictionMode", false)
   ensure(AvgXPDB, "minimapPos",     {})
 
-  -- Tables -------------------------------------------------------------------
   ensure(AvgXPDB, "hourBuckets",   {})
   ensure(AvgXPDB, "bucketStarts",  {})
   ensure(AvgXPDB, "history",       {})
   ensure(AvgXPDB, "historyEvents", {})
 
-  -- Bucket seeds -------------------------------------------------------------
   local n     = AvgXPDB.buckets
   local base  = now() - (n - 1) * BUCKET_SECS
   for i = 1, n do
-    AvgXPDB.bucketStarts[i] = (AvgXPDB.bucketStarts[i] or 
-                              (base + (i - 1) * BUCKET_SECS))
+    AvgXPDB.bucketStarts[i] = (AvgXPDB.bucketStarts[i] or (base + (i - 1) * BUCKET_SECS))
     AvgXPDB.hourBuckets[i]  = AvgXPDB.hourBuckets[i]  or 0
   end
   AvgXPDB.lastBucketIx   = math.min(AvgXPDB.lastBucketIx or n, n)
   AvgXPDB.lastBucketTime = AvgXPDB.bucketStarts[AvgXPDB.lastBucketIx]
 
-  -- One‑off migration --------------------------------------------------------
   self:MigrateOldEvents()
 
-  -- Session internals --------------------------------------------------------
   self._acc, self._sessionXP, self._startXP, self._startTime = 0, 0, 0, 0
+  self._suppressUntil = nil
+  self._lastEvent = nil
 end
 
 function DB:Reset()
@@ -106,17 +116,60 @@ function DB:LogHistory(xp)
     (AvgXPDB.history[day][hr] or 0) + xp
 end
 
-function DB:LogEvent(xp)
+-- Main logging with duplicate resolution -------------------------------------
+function DB:LogEvent(xp, desc, kind, extra)
   local t = now()
-  table.insert(AvgXPDB.historyEvents, {
+  local ev = {
     day  = date("%Y-%m-%d", t),
     time = date("%H:%M:%S", t),
     xp   = xp,
     ts   = t,
-  })
+    desc = desc,
+    kind = kind or "generic",
+  }
+  if extra then for k,v in pairs(extra) do ev[k] = v end end
+
+  local list = AvgXPDB.historyEvents
+  local lastIx = #list
+
+  -- 1️⃣ Replace any recent lower-priority event
+  for i = lastIx, math.max(1, lastIx - 5), -1 do
+    if shouldReplace(list[i], ev) then
+      list[i] = ev
+      self._lastEvent = ev
+      return
+    end
+  end
+
+  -- 2️⃣ Drop if same-or-higher priority event exists already
+  for i = lastIx, math.max(1, lastIx - 5), -1 do
+    local cand = list[i]
+    if cand and cand.xp == ev.xp and isNear(cand, ev, 3) then
+      if (PRIORITY[cand.kind] or 0) >= (PRIORITY[ev.kind] or 0) then
+        return
+      end
+    end
+  end
+
+  -- 3️⃣ Skip blank generics
+  if (not ev.desc or ev.desc == "") then
+    if ev.kind ~= "generic" then
+      ev.desc = ev.kind
+    else
+      return
+    end
+  end
+
+  table.insert(list, ev)
+  self._lastEvent = ev
 end
 
--- 5) Rebuild buckets from full event log (grid‑snapped) ----------------------
+-- Prevent double-logging immediately after a detailed event was captured
+function DB:SuppressNextGenericEvent(window)
+  self._suppressUntil = GetTime() + (window or 1.5)
+end
+
+-- 5) Rebuild buckets from full event log ------------------------------------
 function DB:RebuildBuckets()
   local n      = AvgXPDB.buckets
   local offset = AvgXPDB.gridOffset or 0
@@ -140,7 +193,6 @@ function DB:RebuildBuckets()
   end
 end
 
--- Exposed: change bucket count -----------------------------------------------
 function DB:SetBuckets(n)
   AvgXPDB.buckets = n
   self:RebuildBuckets()
@@ -156,13 +208,18 @@ end
 function DB:OnXPUpdate()
   local cur  = UnitXP("player")
   local gain = cur - self._startXP
-  if gain < 0 then                                         -- Level‑up wrap.
+  if gain < 0 then
     gain = (UnitXPMax("player") - self._startXP) + cur
   end
   self._sessionXP = self._sessionXP + gain
   self._startXP   = cur
 
-  self:Add(gain); self:LogHistory(gain); self:LogEvent(gain)
+  self:Add(gain)
+  self:LogHistory(gain)
+
+  if not self._suppressUntil or GetTime() >= self._suppressUntil then
+    self:LogEvent(gain, nil, "generic")
+  end
 end
 
 function DB:OnLogout()

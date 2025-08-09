@@ -12,6 +12,7 @@ a fully‑customisable bar graph.
 | | |
 |---|---|
 | **Session & Lifetime stats** | Instant XP/hour for the current session **and** all time (per‑character). |
+| **Leveling Report** | A report showing leveling statistics.
 | **Hourly Graph** | 2‑24 rolling “buckets” with tool‑tips and optional prediction bars. |
 | **Prediction Mode** | Forecast how long to level and overlay predicted XP bars. |
 | **History Window** | Scrollable log by event / hour / day with one‑click export. |
